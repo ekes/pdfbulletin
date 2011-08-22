@@ -1,0 +1,6 @@
+name = PDF Bulletin
+description = Periodically e-mail a PDF version of a selected view
+core = 6.x
+dependencies[] = views
+dependencies[] = mimemail
+dependencies[] = job_scheduler

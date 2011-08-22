@@ -1,0 +1,87 @@
+<?php
+
+/**
+ * @file
+ *   Install, and un-install functions.
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function pdfbulletin_schema() {
+  $schema = array();
+
+  $schema['pdfbulletin_view'] = array(
+    'description' => 'Views to email with settings',
+    'fields' => array(
+      'id' => array(
+        'description' => 'PDF bulletin ID',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => '32',
+        'default' => '',
+        'not null' => TRUE,
+        'description' => 'Unique {views}.name',
+      ), 
+      'display_id' => array(
+        'type' => 'varchar',
+        'length' => '64',
+        'default' => '',
+        'not null' => TRUE,
+        'description' => 'Views {views_display}.display_id',
+      ),
+      'args' => array(
+        'type' => 'text',
+        'description' => 'Serialized array of views arguments.',
+        'serialize' => TRUE,
+      ),
+      'filters' => array(
+        'type' => 'text',
+        'description' => 'Serialized array of views filters.',
+        'serialize' => TRUE,
+      ),
+    ),
+    'primary key' => array('id'),
+    'indexes' => array('views' => array('name', 'display_id')),
+  );
+
+  $schema['pdfbulletin_subs'] = array(
+    'description' => 'Subscriptions to PDF bulletins',
+    'fields' => array(
+      'id' => array(
+        'type' => 'int',
+        'description' => 'Reference {pdfbulletin_view}',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'email' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'default' => '',
+        'description' => 'Email address of subscriber',
+      ),
+    ),
+    'indexes' => array('id' => array('id'), 'email' => array('email')),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function pdfbulletin_install() {
+  drupal_install_schema('pdfbulletin');
+}
+
+/**
+ * Implentation of hook_uninstall().
+ */
+function pdfbulletin_uninstall() {
+  drupal_uninstall_schema('pdfbulletin');
+  variable_del('pdfbulletin_pending');
+}

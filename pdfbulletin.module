@@ -1,0 +1,353 @@
+<?php
+
+/**
+ * Implementation of hook_menu().
+ */
+function pdfbulletin_menu() {
+  $items = array();
+  $items['pdfbulletin/%pdfbulletin'] = array(
+    'title' => 'PDF Bulletin',
+    'type' => MENU_CALLBACK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('pdfbulletin_subscribers_form', 1),
+    'access arguments' => array('edit pdf bulletins'),
+    'file' => 'pdfbulletin.pages.inc',
+  );
+  $items['pdfbulletin/%pdfbulletin/subscribers'] = array(
+    'title' => 'Subscribers',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  $items['pdfbulletin/%pdfbulletin/settings'] = array(
+    'title' => 'Settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('pdfbulletin_edit_form', 1),
+    'access arguments' => array('edit pdf bulletins'),
+    'file' => 'pdfbulletin.pages.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+  $items['pdfbulletin/%pdfbulletin/generate'] = array(
+    'title' => 'Sample',
+    'page callback' => 'pdfbulletin_generate_pdf_page',
+    'page arguments' => array(1),
+    'access arguments' => array('edit pdf bulletins'), 
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'pdfbulletin.pages.inc',
+  );
+  $items['pdfbulletin/%pdfbulletin/sendtest'] = array(
+    'title' => 'Send test',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('pdfbulletin_sendtest_form', 1),
+    'access arguments' => array('edit pdf bulletins'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'pdfbulletin.pages.inc',
+  );
+  return $items;
+ }
+
+/**
+ * Implementation of hook_load().
+ */
+function pdfbulletin_load($id) { 
+  $query = 'SELECT * FROM {pdfbulletin_view} WHERE id = %d';
+  $pdfbulletin = db_fetch_object(db_query($query, $id));
+  $pdfbulletin->subscribers = pdfbulletin_subscribers_load($id);
+  $pending = variable_get('pdfbulletin_pending', array());
+  if (isset($pending[$id])) {
+    $pdfbulletin->date = $pending[$id]['start'];
+    $pdfbulletin->frequency = $pending[$id]['frequency'];
+  }
+  else {
+    // it has started; we could load the schedual here.
+    $pdfbulletin->date = time();
+    $pdfbulletin->frequency = 604800;
+  }
+  $pdfbulletin->args = unserialize($pdfbulletin->args);
+  $pdfbulletin->filters = unserialize($pdfbulletin->filters);
+  return $pdfbulletin;
+}
+
+/**
+ * Load subscribers array.
+ */
+function pdfbulletin_subscribers_load($id) {
+  $subscribers = array();
+
+  $query = 'SELECT email FROM {pdfbulletin_subs} WHERE id = %d';
+  $result = db_query($query, $id);
+  while ($row = db_fetch_object($result)) {
+    $subscribers[$row->email] = $row->email;
+  }
+
+  return $subscribers;
+}
+
+/**
+ * Save subscribers array.
+ */
+function pdfbulletin_subscribers_save($id, $subscribers) {
+  db_query('DELETE FROM pdfbulletin_subs WHERE id = %d', $id);
+  foreach ($subscribers as $subscriber) {
+    $record = array('id' => $id, 'email' => $subscriber);
+    drupal_write_record('pdfbulletin_subs', $record);
+  }
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function pdfbulletin_theme($existing, $type, $theme, $path) {
+  return array(
+    'pdfbulletin_email_hmtl' => array(
+      'arguments' => array('pdfbulletin' => NULL, 'html' => NULL),
+      'file' => 'pdfbulletin.theme.inc',
+    ),
+    'pdfbulletin_email_text' => array(
+      'arguments' => array('pdfbulletin' => NULL, 'text' => NULL),
+      'file' => 'pdfbulletin.theme.inc',
+    ),
+    'pdfbulletin_email_pdf' => array(
+      'arguments' => array('pdfbulletin' => NULL, 'html' => NULL),
+      'file' => 'pdfbulletin.theme.inc',
+    ),
+    'pdfbulletin_generate_pdf_page' => array(
+      'arguments' => array('pdfbulletin' => NULL),
+      'file' => 'pdfbulletin.theme.inc',
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter().
+ *
+ * Add PDF Bulletin submit button to appropriate views.
+ * @see pdfbulletin_views_exposed_form_submit().
+ */
+function pdfbulletin_form_views_exposed_form_alter(&$form, &$form_state) {
+  if (user_access('edit pdf bulletins')) {
+    $form['pdfbulletin_create'] = array(
+      '#type' => 'submit',
+      '#value' => t('Create PDF bulletin'),
+      '#submit' => array('pdfbulletin_views_exposed_form_submit'),
+    );
+  }
+}
+
+function pdfbulletin_views_exposed_form_submit($form, &$form_state) {
+  $view =& $form_state['view'];
+
+  // the settings we need to store from the view
+  $pdfbulletin['name'] = $view->name;
+  $pdfbulletin['display_id'] = $view->current_display; // @todo check correct value
+  $pdfbulletin['args'] = $view->args;
+  $pdfbulletin['filters'] = $view->exposed_input;
+  
+  drupal_write_record('pdfbulletin_view', $pdfbulletin);
+
+  $destination = '';
+  if (isset($_REQUEST['destination'])) {
+    $destination = drupal_get_destination();
+    unset($_REQUEST['destination']);
+  }
+
+//  drupal_goto('pdfbulletin/' . $pdfbulletin->id, $destination);
+}
+
+/**
+ * Implementation of hook_cron().
+ */
+function pdfbulletin_cron() {
+  $pending = variable_get('pdfbulletin_pending', array());
+  foreach ($pending as $id => $data) {
+    if ($data['start'] < time()) {
+      $job = array(
+        'callback' => 'pdfbulletin_send_view',
+        'type' => '',
+        'id' => $id,
+        'period' => $data['frequency'],
+        'periodic' => TRUE,
+      );
+      job_scheduler()->remove($job);
+      job_scheduler()->set($job);
+      unset($pending[$id]);
+    }
+  }
+  variable_set('pdfbulletin_pending', $pending);
+} 
+
+/**
+ * core
+ */
+function pdfbulletin_send_bulletin($job) {
+  $pdfbulletin = pdfbulletin_load($job['id']);
+  pdfbulletin_generate_bulletin($pdfbulletin);
+  pdfbulletin_send_email($pdfbulletin);
+}
+
+function pdfbulletin_send_email($pdfbulletin) {
+  $sender = ''; // @todo sender
+  $subject = 'PDF Bulletin'; // @todo from title of view?
+  $body = $pdfbulletin->html;
+  $plaintext = FALSE;
+  $headers = array();
+  $text = ''; // html2txt $body
+  $attachments = array(array(
+    'filepath' => $pdfbulletin->file->filepath,
+    'filecontent' => 'PDF Bulletin', // @todo from title of view?
+    'filename' => $pdfbulletin->file->filename,
+    'filemime' => $pdfbulletin->file->filemime,
+  ));
+  // @todo, just generate the mail, and change the recipient.
+  foreach ($pdfbulletin->subscribers as $subscriber) {
+    $message = mimemail($sender, $subscriber, $subject, $body, $plaintext, $headers, $text, $attachments); // , $mailkey = '', $send = TRUE)
+  }
+
+  return;
+}
+
+function pdfbulletin_generate_bulletin(&$pdfbulletin) {
+  $shorten = 1; //debug
+  $tmp_file = '';
+
+  do {
+    if (!empty($tmp_file)) {
+      // previous attempt that was too long.
+      unlink($tmp_file);
+    }
+    $html = pdfbulletin_generate_html($pdfbulletin, $shorten);
+    $tmp_file = pdfbulletin_generate_pdf($pdfbulletin, $html);
+    $shorten++;
+  } while (pdfbulletin_pdf_length($tmp_file) > 1 && $shorten < 10);
+
+  if (--$shorten) {
+    watchdog('pdfbulletin', 'PDF bulletin @id shortened by @shorten items', array('@id' => $pdfbulletin->id, '@shorten' => $shorten));
+  }
+
+  $pdfbulletin->html = $html;
+  $pdfbulletin->file = pdfbulletin_save_pdf($pdfbulletin, $tmp_file);
+  return;
+}
+
+function pdfbulletin_save_pdf($pdfbulletin, $tmp_file) {
+  $path = file_create_path('pdfbulletin');
+  if (! file_check_directory($path, FILE_CREATE_DIRECTORY)) {
+    watchdog('pdfbulletin', 'Unable to create pdfbulletin directory @path', array('@path' => $path), WATCHDOG_ERROR);
+    return FALSE;
+  }
+  $filepath = file_create_filename($pdfbulletin->id . '.pdf', $path);
+  if (! file_move($tmp_file, $filepath)) {
+    return FALSE;
+  }
+
+  $file = new stdClass();
+  $file->filename = basename($filepath);
+  $file->filepath = $filepath;
+  $file->filemime = 'application/pdf';
+  $file->filesize = filesize($filepath);
+  $file->uid = 0; // @todo we can have an owner...
+  $file->status = FILE_STATUS_TEMPORARY;
+  $file->timestamp = time();
+  drupal_write_record('files', $file);
+
+  return $file;
+}
+
+function pdfbulletin_pdf_length($file) {
+  $pdfinfo = pdfbulletin_util_settings('pdfinfo');
+
+  $descriptor = array(0 => array('pipe', 'r'), 1 => array('pipe', 'w'), 2 => array('pipe', 'w'));
+  
+  $cmd = realpath($pdfinfo) . ' ' . $file;
+  $descriptor = array(0 => array('pipe', 'r'), 1 => array('pipe', 'w'), 2 => array('pipe', 'w'));
+  $process = proc_open($cmd, $descriptor, $pipes, NULL, NULL);
+  if (is_resource($process)) {
+    $output = stream_get_contents($pipes[1]);
+    $error = stream_get_contents($pipes[2]);
+    foreach ($pipes as $pipe) {
+      fclose($pipe);
+    }
+    $retval = proc_terminate($process);
+  }
+  preg_match('/Pages:(.*)/', $output, $matches);
+  return (int) $matches[1];
+}
+
+function pdfbulletin_generate_pdf($pdfbulletin, $html) {
+  $paper_size = pdfbulletin_util_settings('paper_size');
+  $page_orientation = pdfbulletin_util_settings('page_orientation');
+  $dpi = pdfbulletin_util_settings('dpi');
+  $options = pdfbulletin_util_settings('options');
+  $wkhtmltopdf = pdfbulletin_util_settings('wkhtmltopdf');
+  $html = theme('pdfbulletin_email_pdf', $pdfbulletin, $html);
+  $output_filename = tempnam(file_directory_temp(), 'pdfbulletin');
+
+  $descriptor = array(0 => array('pipe', 'r'), 1 => array('pipe', 'w'), 2 => array('pipe', 'w'));
+  $cmd = realpath($wkhtmltopdf) ." -q --page-size $paper_size --orientation $page_orientation --dpi $dpi $options - $output_filename";
+  $process = proc_open($cmd, $descriptor, $pipes, NULL, NULL);
+
+  if (is_resource($process)) {
+    fwrite($pipes[0], $html);
+    fclose($pipes[0]);
+
+    $output = stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
+
+    stream_set_blocking($pipes[2], 0);
+    $error = stream_get_contents($pipes[2]);
+
+    if (!empty($error)) {
+      watchdog('pdfbulletin', 'Generate PDF wkhtmltopdf error: @error', array('@error' => $error), WATCHDOG_ERROR);
+    }
+    fclose($pipes[2]);
+
+    $retval = proc_terminate($process);
+  }
+  return $output_filename;
+}
+
+function pdfbulletin_generate_html($pdfbulletin, $shorten = 0) {
+  $view = views_get_view($pdfbulletin->name);
+  if (! $view) { // 
+    // @todo what level of access control should we have!? 
+    // || !$view->access($pdfbulletin->display_id)) {
+    return;
+  }
+  if (! $view->set_display($pdfbulletin->display_id)) {
+    return;
+  }
+
+  // hide exposed filters; but set them to value if chosen.
+  $filters = $view->get_items('filter', $pdfbulletin->display_id);
+  foreach ($filters as $name => $filter) {
+    $filter['exposed'] = FALSE;
+    if (isset($pdfbulletin->filters[$name])) {
+      $filter['value'] = $pdfbulletin->filters[$name];
+    }
+    $view->set_item($pdfbulletin->display_id, 'filter', $name, $filter);
+  }
+
+  $view->pre_execute($pdfbulletin->args);
+  $view->set_exposed_input($pdfbulletin->filters);
+  if ($shorten) {
+    $view->set_items_per_page($view->pager['items_per_page'] - $shorten);
+  }
+  $view->pager['use_pager'] = 0; // don't want to see pager
+  $output = $view->display_handler->execute();
+  $view->post_execute();
+  return $output;
+}
+
+/**
+ * @todo make admin configurable.
+ */
+function pdfbulletin_util_settings($setting) {
+  $settings = array(
+    'pdfinfo' => '/usr/bin/pdfinfo',
+    'wkhtmltopdf' => '/usr/local/bin/wkhtmltopdf-amd64',
+    'paper_size' => 'a4',
+    'page_orientation' => 'portrait',
+    'dpi' => '300',
+    'options' => '',
+  );
+
+  return $settings[$setting];
+}
