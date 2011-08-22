@@ -64,7 +64,7 @@ function pdfbulletin_load($id) {
   $pdfbulletin->args = unserialize($pdfbulletin->args);
   $pdfbulletin->filters = unserialize($pdfbulletin->filters);
   return $pdfbulletin;
-}
+} 
 
 /**
  * Load subscribers array.
@@ -117,6 +117,15 @@ function pdfbulletin_theme($existing, $type, $theme, $path) {
 }
 
 /**
+ * Implementation of hook_perm().
+ */
+function pdfbulletin_perm() {
+  return array(
+    'edit pdf bulletins',
+  );
+}
+
+/**
  * Implementation of hook_form_FORM_ID_alter().
  *
  * Add PDF Bulletin submit button to appropriate views.
@@ -132,6 +141,12 @@ function pdfbulletin_form_views_exposed_form_alter(&$form, &$form_state) {
   }
 }
 
+/**
+ * Form submit callback.
+ *
+ * Saves a new pdf bulletin from a submitted view.
+ * @see pdfbulletin_form_views_exposed_form_alter().
+ */
 function pdfbulletin_views_exposed_form_submit($form, &$form_state) {
   $view =& $form_state['view'];
 
@@ -154,6 +169,8 @@ function pdfbulletin_views_exposed_form_submit($form, &$form_state) {
 
 /**
  * Implementation of hook_cron().
+ *
+ * Add any new, and ready to begin, pdf bulletins to job_schedule.
  */
 function pdfbulletin_cron() {
   $pending = variable_get('pdfbulletin_pending', array());
@@ -175,7 +192,9 @@ function pdfbulletin_cron() {
 } 
 
 /**
- * core
+ * job_schedule callback.
+ *
+ * Generates a pdfbulletin and mails it to subscribers.
  */
 function pdfbulletin_send_bulletin($job) {
   $pdfbulletin = pdfbulletin_load($job['id']);
@@ -183,6 +202,12 @@ function pdfbulletin_send_bulletin($job) {
   pdfbulletin_send_email($pdfbulletin);
 }
 
+/**
+ * Send generated pdfbulletin to subscribers email addreses.
+ *
+ * @param $pdfbulletin
+ *   pdfbulletin object with html and (pdf) file variables set.
+ */
 function pdfbulletin_send_email($pdfbulletin) {
   $sender = ''; // @todo sender
   $subject = 'PDF Bulletin'; // @todo from title of view?
@@ -204,8 +229,18 @@ function pdfbulletin_send_email($pdfbulletin) {
   return;
 }
 
+/**
+ * Generate pdf bulletin file.
+ *
+ * Receives pdf bulletin object by reference and adds:
+ *  $html the html output of the bulletin view.
+ *  $file a temporary drupal file object containing the themed pdf bulletin.
+ *
+ * @param $pdfbulletin
+ *   PDF Bulletin object.
+ */
 function pdfbulletin_generate_bulletin(&$pdfbulletin) {
-  $shorten = 1; //debug
+  $shorten = 0; 
   $tmp_file = '';
 
   do {
@@ -227,6 +262,16 @@ function pdfbulletin_generate_bulletin(&$pdfbulletin) {
   return;
 }
 
+/**
+ * Saves a successful pdf to a drupal temporary files.
+ *
+ * @param $pdfbulletin
+ *   PDF bulletin object.
+ * @param $tmp_file
+ *   Path to temporary PDF file to add.
+ * @return
+ *   Drupal file object.
+ */
 function pdfbulletin_save_pdf($pdfbulletin, $tmp_file) {
   $path = file_create_path('pdfbulletin');
   if (! file_check_directory($path, FILE_CREATE_DIRECTORY)) {
@@ -251,6 +296,14 @@ function pdfbulletin_save_pdf($pdfbulletin, $tmp_file) {
   return $file;
 }
 
+/**
+ * Determine the number of pages of a pdf.
+ *
+ * @param $file
+ *  String filepath of pdf to test.
+ * @return
+ *  Integer number of pages.
+ */
 function pdfbulletin_pdf_length($file) {
   $pdfinfo = pdfbulletin_util_settings('pdfinfo');
 
@@ -271,6 +324,19 @@ function pdfbulletin_pdf_length($file) {
   return (int) $matches[1];
 }
 
+/**
+ * Generate pdf file of html.
+ *
+ * The HTML is themed by theme('pdfbulletin_email_pdf') before being turned into
+ * the PDF.
+ *
+ * @param $pdfbulletin
+ *   PDF Bulletin object.
+ * @param $html
+ *   String html to turn into PDF.
+ * @return
+ *   String path to temporary file location of PDF.
+ */
 function pdfbulletin_generate_pdf($pdfbulletin, $html) {
   $paper_size = pdfbulletin_util_settings('paper_size');
   $page_orientation = pdfbulletin_util_settings('page_orientation');
@@ -304,6 +370,16 @@ function pdfbulletin_generate_pdf($pdfbulletin, $html) {
   return $output_filename;
 }
 
+/**
+ * Generate HTML from PDF Bulletin view.
+ *
+ * @param $pdfbulletin
+ *  PDF Bulletin object.
+ * @param $shorten
+ *  (optional) number of rows to remove from default view length.
+ * @return
+ *  String html of output.
+ */
 function pdfbulletin_generate_html($pdfbulletin, $shorten = 0) {
   $view = views_get_view($pdfbulletin->name);
   if (! $view) { // 
@@ -337,6 +413,7 @@ function pdfbulletin_generate_html($pdfbulletin, $shorten = 0) {
 }
 
 /**
+ * Module settings.
  * @todo make admin configurable.
  */
 function pdfbulletin_util_settings($setting) {

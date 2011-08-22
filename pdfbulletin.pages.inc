@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * Form constructor for an individal PDF Bulletin setting.
+ * 
+ * @param pdfbulletin
+ *   PDF Bulletin object from pdfbulletin_load().
+ *
+ * @see pdfbulletin_edit_form_submit().
+ * @ingroup forms.
+ */
 function pdfbulletin_edit_form($form_state, $pdfbulletin) {
   $form['pdfbulletin'] = array(
     '#type' => 'value',
@@ -48,6 +57,9 @@ function pdfbulletin_edit_form($form_state, $pdfbulletin) {
   return $form;
 }
 
+/**
+ * Form submission handler for pdfbulletin_edit_form().
+ */
 function pdfbulletin_edit_form_submit(&$form, &$form_state) {
   $pdfbulletin = $form_state['values']['pdfbulletin'];
 
@@ -59,6 +71,16 @@ function pdfbulletin_edit_form_submit(&$form, &$form_state) {
   variable_set('pdfbulletin_pending', $pending);
 }
 
+/**
+ * Form constructor for an individual PDF Bulletin subscribers.
+ *
+ * @param pdfbulletin.
+ *  PDF Bulletin object from pdfbulletin_load().
+ *
+ * @see pdfbulletin_subscribers_form_validate().
+ * @see pdfbulletin_subscribers_form_sumbit().
+ * @ingroup forms.
+ */
 function pdfbulletin_subscribers_form($form_state, $pdfbulletin) {
   $subscribers = '';
   foreach ($pdfbulletin->subscribers as $email) {
@@ -89,6 +111,11 @@ function pdfbulletin_subscribers_form($form_state, $pdfbulletin) {
   return $form;
 } 
 
+/**
+ * Form validation handler for pdfbulletin_subscribers_form().
+ *
+ * @see pdfbulletin_subscribers_form_submit().
+ */
 function pdfbulletin_subscribers_form_validate($form, &$form_state) {
   $emails = explode("\n", $form_state['values']['subscribers']);
   foreach ($emails as $email) {
@@ -99,6 +126,11 @@ function pdfbulletin_subscribers_form_validate($form, &$form_state) {
   }
 }
 
+/**
+ * Form submission handler for pdfbulletin_subscribers_form().
+ *
+ * @see pdfbulletin_subscribers_form_validate().
+ */
 function pdfbulletin_subscribers_form_submit($form, &$form_state) {
   $subscriptions = array();
 
@@ -113,6 +145,16 @@ function pdfbulletin_subscribers_form_submit($form, &$form_state) {
   drupal_set_message(t('Subscriptions saved'));
 }
 
+/**
+ * Form constructor for sending a one of test of an inidividual PDF Bulletin.
+ *
+ * @param pdfbulletin.
+ *   PDF Bulletin object from pdfbulletin_load().
+ *
+ * @see pdfbulletin_sendtest_form_validate().
+ * @see pdfbulletin_sendtest_form_submit().
+ * @ingroup forms.
+ */
 function pdfbulletin_sendtest_form($form_state, $pdfbulletin) {
   $form['pdfbulletin'] = array(
     '#type' => 'value',
@@ -137,6 +179,11 @@ function pdfbulletin_sendtest_form($form_state, $pdfbulletin) {
   return $form; 
 }
 
+/**
+ * Form validation handler for pdfbulletin_sendtest_form().
+ *
+ * @see pdfbulletin_sendtest_form_submit().
+ */
 function pdfbulletin_sendtest_form_validate($form, &$form_state) {
   $emails = explode("\n", $form_state['values']['subscribers']);
   foreach ($emails as $email) {
@@ -147,6 +194,11 @@ function pdfbulletin_sendtest_form_validate($form, &$form_state) {
   }
 }
 
+/**
+ * Form submission handler for pdfbulletin_sendtest_form_submit().
+ * 
+ * @see pdfbulletin_sendtest_form_validate().
+ */
 function pdfbulletin_sendtest_form_submit($form, &$form_state) {
   $subscriptions = array();
 
@@ -166,6 +218,12 @@ function pdfbulletin_sendtest_form_submit($form, &$form_state) {
   drupal_set_message('Test message sent.');
 }
 
+/**
+ * Page callback for a sample of an individual PDF Bulletin.
+ *
+ * @param pdfbulletin.
+ *  PDF BUlletin object from pdfbulletin_load().
+ */
 function pdfbulletin_generate_pdf_page($pdfbulletin) {
   pdfbulletin_generate_bulletin($pdfbulletin);
   return theme('pdfbulletin_generate_pdf_page', $pdfbulletin, $pdfbulletin->html, $pdfbulletin->file->filepath);
