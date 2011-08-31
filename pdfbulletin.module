@@ -155,7 +155,10 @@ function pdfbulletin_views_exposed_form_submit($form, &$form_state) {
   $pdfbulletin['display_id'] = $view->current_display; // @todo check correct value
   $pdfbulletin['args'] = $view->args;
   $pdfbulletin['filters'] = $view->exposed_input;
-  
+  if (isset($pdfbulletin['filters']['op'])) {
+    unset($pdfbulletin['filters']['op']);
+  }
+
   drupal_write_record('pdfbulletin_view', $pdfbulletin);
 
   $destination = '';
@@ -164,7 +167,7 @@ function pdfbulletin_views_exposed_form_submit($form, &$form_state) {
     unset($_REQUEST['destination']);
   }
 
-//  drupal_goto('pdfbulletin/' . $pdfbulletin->id, $destination);
+  drupal_goto('pdfbulletin/' . $pdfbulletin['id'], $destination);
 }
 
 /**
@@ -391,22 +394,22 @@ function pdfbulletin_generate_html($pdfbulletin, $shorten = 0) {
     return;
   }
 
-  // hide exposed filters; but set them to value if chosen.
+  // Set filters.
+  // I've tried to remove 'exposed' here; but some filters (eg taxonomy)
+  // don't work optionally if they are not exposed.
+  // Hidden with CSS for now.
   $filters = $view->get_items('filter', $pdfbulletin->display_id);
   foreach ($filters as $name => $filter) {
-    $filter['exposed'] = FALSE;
-    if (isset($pdfbulletin->filters[$name])) {
+    if (! empty($pdfbulletin->filters[$name])) {
       $filter['value'] = $pdfbulletin->filters[$name];
+      $view->set_item($pdfbulletin->display_id, 'filter', $name, $filter);
     }
-    $view->set_item($pdfbulletin->display_id, 'filter', $name, $filter);
   }
-
   $view->pre_execute($pdfbulletin->args);
-  $view->set_exposed_input($pdfbulletin->filters);
   if ($shorten) {
     $view->set_items_per_page($view->pager['items_per_page'] - $shorten);
   }
-  $view->pager['use_pager'] = 0; // don't want to see pager
+  $view->pager['use_pager'] = 0; // don't want to see pager */
   $output = $view->display_handler->execute();
   $view->post_execute();
   return $output;
@@ -419,7 +422,7 @@ function pdfbulletin_generate_html($pdfbulletin, $shorten = 0) {
 function pdfbulletin_util_settings($setting) {
   $settings = array(
     'pdfinfo' => '/usr/bin/pdfinfo',
-    'wkhtmltopdf' => '/usr/local/bin/wkhtmltopdf-amd64',
+    'wkhtmltopdf' => '/usr/local/bin/wkhtmltopdf-i386',
     'paper_size' => 'a4',
     'page_orientation' => 'portrait',
     'dpi' => '300',

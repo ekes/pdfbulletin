@@ -9,6 +9,7 @@
  * Theme the HTML version of the e-mail.
  */
 function theme_pdfbulletin_email_html($pdfbulletin, $html) {
+  $html = '<div class="pdfbulletin">' . $html . '</div>';
   return $html;
 }
 
@@ -21,9 +22,19 @@ function theme_pdfbulletin_email_text($pdfbulletin, $text) {
 
 /**
  * Theme the HTML used to make the PDF.
+ *
+ * @todo add title.
  */
 function theme_pdfbulletin_email_pdf($pdfbulletin, $html) {
-  return $html;
+  $head = '
+<head>
+<style type="text/css">
+.pdfbulletin .view-filters, .pdfbulletin .views-admin-links { display: none; }
+</style>
+</head>
+';
+  $body = '<body><div class="pdfbulletin">' . $html . '</div></body>';
+  return '<html>' . $head . $body . '</html>';
 }
 
 /**
@@ -32,6 +43,7 @@ function theme_pdfbulletin_email_pdf($pdfbulletin, $html) {
 function theme_pdfbulletin_generate_pdf_page($pdfbulletin, $html, $filepath) {
   $output = l(t('Attachment PDF'), $filepath);
   $output .= '<h2>' . t('HTML') . '</h2>';
-  $output .= $pdfbulletin->html;
+  $html = '<div class="pdfbulletin">' . $pdfbulletin->html . '</div>';
+  $output .= $html;
   return $output;
 }
