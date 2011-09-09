@@ -44,6 +44,16 @@ function pdfbulletin_schema() {
         'description' => 'Serialized array of views filters.',
         'serialize' => TRUE,
       ),
+      'header' => array(
+        'type' => 'text',
+        'description' => 'Header HTML for the bulletin.',
+        'not null' => TRUE,
+      ),
+      'footer' => array(
+        'type' => 'text',
+        'description' => 'Footer HTML for the bulletin.',
+        'not null' => TRUE,
+      ),
     ),
     'primary key' => array('id'),
     'indexes' => array('views' => array('name', 'display_id')),

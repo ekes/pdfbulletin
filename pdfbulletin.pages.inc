@@ -32,10 +32,31 @@ function pdfbulletin_edit_form($form_state, $pdfbulletin) {
     '#value' => $pdfbulletin->display_id,
     '#disabled' => TRUE,
   );
+  $form['header_format'] = array(
+    '#tree' => FALSE,
+  );
+  $form['header_format']['header'] = array(
+    '#title' => t('Header'),
+    '#type' => 'textarea',
+    '#default_value' => $pdfbulletin->header,
+  );
+  $form['header_format']['format'] = filter_form(2, NULL, array('header_format'));
+  $form['footer_format'] = array(
+    '#tree' => FALSE,
+  );
+  $form['footer_format']['footer'] = array(
+    '#title' => t('Footer'),
+    '#type' => 'textarea',
+    '#default_value' => $pdfbulletin->footer,
+  );
+  $form['footer_format']['format'] = filter_form(2, NULL, array('footer_format'));
   $form['frequency'] = array(
     '#type' => 'select',
     '#options' => array(
+      '86400' => 'daily',
       '604800' => 'weekly',
+      '1209600' => 'bi-weekly',
+      '2419200' => 'monthly',
     ),
     '#title' => t('Frequency'),
     '#default_value' => $pdfbulletin->frequency,
@@ -58,6 +79,13 @@ function pdfbulletin_edit_form($form_state, $pdfbulletin) {
 }
 
 /**
+ * Form validation handler for pdfbulletin_edit_form().
+ */
+function pdfbulletin_edit_form_validate(&$form, &$form_state) {
+  // @todo SERIOUSLY
+}
+
+/**
  * Form submission handler for pdfbulletin_edit_form().
  */
 function pdfbulletin_edit_form_submit(&$form, &$form_state) {
@@ -69,6 +97,11 @@ function pdfbulletin_edit_form_submit(&$form, &$form_state) {
   $pending = variable_get('pdfbulletin_pending', array());
   $pending[$pdfbulletin->id] = array('start' => $start_time, 'frequency' => (int) $form_state['values']['frequency']);
   variable_set('pdfbulletin_pending', $pending);
+
+  $pdfbulletin->header = $form_state['values']['header'];
+  $pdfbulletin->footer = $form_state['values']['footer'];
+
+  drupal_write_record('pdfbulletin_view', $pdfbulletin, 'id');
 }
 
 /**
@@ -156,19 +189,28 @@ function pdfbulletin_subscribers_form_submit($form, &$form_state) {
  * @ingroup forms.
  */
 function pdfbulletin_sendtest_form($form_state, $pdfbulletin) {
+  pdfbulletin_generate_bulletin($pdfbulletin);
+  $stage1 = '<h2>' . t('Step 1: Download a copy of the pdf') . '</h2>';
+  $stage1 .= theme('pdfbulletin_generate_pdf_link', $pdfbulletin->file->filepath, $pdfbulletin);
+  $form['stage1'] = array(
+    '#type' => 'markup',
+    '#value' => $stage1,
+  );
+  $form['stage2'] = array(
+    '#type' => 'markup',
+    '#value' => '<h2>' . t('Step 2: Send a copy with a test e-mail') . '</h2>',
+  );
   $form['pdfbulletin'] = array(
     '#type' => 'value',
     '#value' => $pdfbulletin,
   );
   $form['id'] = array(
-    '#title' => t('Bulletin ID'),
-    '#type' => 'textfield',
+    '#type' => 'value',
     '#value' => $pdfbulletin->id,
-    '#disabled' => TRUE,
   );
   $form['subscribers'] = array(
     '#type' => 'textarea',
-    '#title' => t('e-mail addresses'),
+    '#title' => t('e-mail addresses to send test message to'),
     '#description' => t('Add one e-mail address per line.'),
   );
   $form['submit'] = array(
@@ -212,10 +254,11 @@ function pdfbulletin_sendtest_form_submit($form, &$form_state) {
  
   $pdfbulletin = $form_state['values']['pdfbulletin'];
   $pdfbulletin->subscribers = $subscriptions;
-  pdfbulletin_generate_bulletin($pdfbulletin);
   pdfbulletin_send_email($pdfbulletin);
 
   drupal_set_message('Test message sent.');
+  // @todo make this more redirect friendly
+  drupal_goto('/pdfbulletin/' . $pdfbulletin->id . '/subscribers');
 }
 
 /**
@@ -226,5 +269,5 @@ function pdfbulletin_sendtest_form_submit($form, &$form_state) {
  */
 function pdfbulletin_generate_pdf_page($pdfbulletin) {
   pdfbulletin_generate_bulletin($pdfbulletin);
-  return theme('pdfbulletin_generate_pdf_page', $pdfbulletin, $pdfbulletin->html, $pdfbulletin->file->filepath);
+  return theme('pdfbulletin_generate_pdf_page', $pdfbulletin, $pdfbulletin->file->filepath, $pdfbulletin->html, $pdfbulletin->header_safe, $pdfbulletin->footer_safe);
 } 

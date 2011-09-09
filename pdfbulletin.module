@@ -16,6 +16,7 @@ function pdfbulletin_menu() {
   $items['pdfbulletin/%pdfbulletin/subscribers'] = array(
     'title' => 'Subscribers',
     'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => 10,
   );
   $items['pdfbulletin/%pdfbulletin/settings'] = array(
     'title' => 'Settings',
@@ -24,22 +25,16 @@ function pdfbulletin_menu() {
     'access arguments' => array('edit pdf bulletins'),
     'file' => 'pdfbulletin.pages.inc',
     'type' => MENU_LOCAL_TASK,
-  );
-  $items['pdfbulletin/%pdfbulletin/generate'] = array(
-    'title' => 'Sample',
-    'page callback' => 'pdfbulletin_generate_pdf_page',
-    'page arguments' => array(1),
-    'access arguments' => array('edit pdf bulletins'), 
-    'type' => MENU_LOCAL_TASK,
-    'file' => 'pdfbulletin.pages.inc',
+    'weight' => 0,
   );
   $items['pdfbulletin/%pdfbulletin/sendtest'] = array(
-    'title' => 'Send test',
+    'title' => 'Test',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('pdfbulletin_sendtest_form', 1),
     'access arguments' => array('edit pdf bulletins'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'pdfbulletin.pages.inc',
+    'weight' => 5,
   );
   return $items;
  }
@@ -63,6 +58,8 @@ function pdfbulletin_load($id) {
   }
   $pdfbulletin->args = unserialize($pdfbulletin->args);
   $pdfbulletin->filters = unserialize($pdfbulletin->filters);
+  $pdfbulletin->header_safe = check_markup($pdfbulletin->header, 2);
+  $pdfbulletin->footer_safe = check_markup($pdfbulletin->footer, 2);
   return $pdfbulletin;
 } 
 
@@ -97,20 +94,20 @@ function pdfbulletin_subscribers_save($id, $subscribers) {
  */
 function pdfbulletin_theme($existing, $type, $theme, $path) {
   return array(
-    'pdfbulletin_email_hmtl' => array(
-      'arguments' => array('pdfbulletin' => NULL, 'html' => NULL),
+    'pdfbulletin_email_html' => array(
+      'arguments' => array('pdfbulletin' => NULL, 'html' => NULL, 'header' => NULL, 'footer' => NULL),
       'file' => 'pdfbulletin.theme.inc',
     ),
     'pdfbulletin_email_text' => array(
-      'arguments' => array('pdfbulletin' => NULL, 'text' => NULL),
+      'arguments' => array('pdfbulletin' => NULL, 'text' => NULL, 'header' => NULL, 'footer' => NULL),
       'file' => 'pdfbulletin.theme.inc',
     ),
     'pdfbulletin_email_pdf' => array(
-      'arguments' => array('pdfbulletin' => NULL, 'html' => NULL),
+      'arguments' => array('pdfbulletin' => NULL, 'html' => NULL, 'header' => NULL, 'footer' => NULL),
       'file' => 'pdfbulletin.theme.inc',
     ),
-    'pdfbulletin_generate_pdf_page' => array(
-      'arguments' => array('pdfbulletin' => NULL),
+    'pdfbulletin_generate_pdf_link' => array(
+      'arguments' => array('filepath' => NULL, 'pdfbulletin' => NULL),
       'file' => 'pdfbulletin.theme.inc',
     ),
   );
@@ -122,6 +119,16 @@ function pdfbulletin_theme($existing, $type, $theme, $path) {
 function pdfbulletin_perm() {
   return array(
     'edit pdf bulletins',
+  );
+}
+
+/**
+ * Implementation of hook_views_api().
+ */
+function pdfbulletin_views_api() {
+  return array(
+    'api' => 2.0,
+    'path' => drupal_get_path('module', 'pdfbulletin') . '/views',
   );
 }
 
@@ -138,6 +145,7 @@ function pdfbulletin_form_views_exposed_form_alter(&$form, &$form_state) {
       '#value' => t('Create PDF bulletin'),
       '#submit' => array('pdfbulletin_views_exposed_form_submit'),
     );
+    $form['submit']['#value'] = t('Filter');
   }
 }
 
@@ -167,7 +175,7 @@ function pdfbulletin_views_exposed_form_submit($form, &$form_state) {
     unset($_REQUEST['destination']);
   }
 
-  drupal_goto('pdfbulletin/' . $pdfbulletin['id'], $destination);
+  drupal_goto('pdfbulletin/' . $pdfbulletin['id'] . '/settings', $destination);
 }
 
 /**
@@ -213,8 +221,8 @@ function pdfbulletin_send_bulletin($job) {
  */
 function pdfbulletin_send_email($pdfbulletin) {
   $sender = ''; // @todo sender
-  $subject = 'PDF Bulletin'; // @todo from title of view?
-  $body = $pdfbulletin->html;
+  $subject = 'incourage: Upcoming events notice'; // @todo from title of view?
+  $body = theme('pdfbulletin_email_html', $pdfbulletin, $pdfbulletin->html, $pdfbulletin->header_safe, $pdfbulletin->footer_safe);
   $plaintext = FALSE;
   $headers = array();
   $text = ''; // html2txt $body
@@ -346,7 +354,7 @@ function pdfbulletin_generate_pdf($pdfbulletin, $html) {
   $dpi = pdfbulletin_util_settings('dpi');
   $options = pdfbulletin_util_settings('options');
   $wkhtmltopdf = pdfbulletin_util_settings('wkhtmltopdf');
-  $html = theme('pdfbulletin_email_pdf', $pdfbulletin, $html);
+  $html = theme('pdfbulletin_email_pdf', $pdfbulletin, $html, $pdfbulletin->header_safe, $pdfbulletin->footer_safe);
   $output_filename = tempnam(file_directory_temp(), 'pdfbulletin');
 
   $descriptor = array(0 => array('pipe', 'r'), 1 => array('pipe', 'w'), 2 => array('pipe', 'w'));
@@ -423,7 +431,7 @@ function pdfbulletin_util_settings($setting) {
   $settings = array(
     'pdfinfo' => '/usr/bin/pdfinfo',
     'wkhtmltopdf' => '/usr/local/bin/wkhtmltopdf-i386',
-    'paper_size' => 'a4',
+    'paper_size' => 'letter',
     'page_orientation' => 'portrait',
     'dpi' => '300',
     'options' => '',
