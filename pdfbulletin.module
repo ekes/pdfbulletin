@@ -1,76 +1,165 @@
 <?php
 
+define('PDFBULLETIN_SCHEDULED_NO', 0x001);
+define('PDFBULLETIN_SCHEDULED_YES', 0x002);
+define('PDFBULLETIN_SCHEDULED_TODO', 0x004);
+
+/**
+ * Implementation of hook_node_info().
+ */
+function pdfbulletin_node_info() {
+  return array(
+    'pdfbulletin' => array(
+      'name' => t('PDF Bulletin'),
+      'module' => 'pdfbulletin',
+      'description' => t('Period e-mail newsletter from a view in PDF format'),
+      'has_title' => TRUE,
+      'title_label' => t('Bulletin name'),
+      'has_body' => FALSE,
+    ),
+  );
+}
+
 /**
  * Implementation of hook_menu().
  */
 function pdfbulletin_menu() {
   $items = array();
-  $items['pdfbulletin/%pdfbulletin'] = array(
-    'title' => 'PDF Bulletin',
-    'type' => MENU_CALLBACK,
+  $items['node/%node/subscribers'] = array(
+    'title' => 'Subscribers',
+    'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('pdfbulletin_subscribers_form', 1),
     'access arguments' => array('edit pdf bulletins'),
     'file' => 'pdfbulletin.pages.inc',
+    'weight' => 20,
   );
-  $items['pdfbulletin/%pdfbulletin/subscribers'] = array(
-    'title' => 'Subscribers',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => 10,
-  );
-  $items['pdfbulletin/%pdfbulletin/settings'] = array(
-    'title' => 'Settings',
+  $items['node/%node/settings'] = array(
+    'title' => 'E-mail settings',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('pdfbulletin_edit_form', 1),
+    'page arguments' => array('pdfbulletin_settings_form', 1),
     'access arguments' => array('edit pdf bulletins'),
     'file' => 'pdfbulletin.pages.inc',
     'type' => MENU_LOCAL_TASK,
-    'weight' => 0,
+    'weight' => 10,
   );
-  $items['pdfbulletin/%pdfbulletin/sendtest'] = array(
+  $items['node/%node/sendtest'] = array(
     'title' => 'Test',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('pdfbulletin_sendtest_form', 1),
     'access arguments' => array('edit pdf bulletins'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'pdfbulletin.pages.inc',
-    'weight' => 5,
+    'weight' => 15,
   );
   return $items;
- }
+}
+
+/**
+ * Implementation of hook_menu_alter().
+ */
+function pdfbulletin_menu_alter(&$items) {
+  // we generate a node from the view to go into the bulletin
+  // generating one without picking a view first makes no sense.
+  $items['node/add/pdfbulletin']['access callback'] = FALSE;
+}
 
 /**
  * Implementation of hook_load().
  */
-function pdfbulletin_load($id) { 
-  $query = 'SELECT * FROM {pdfbulletin_view} WHERE id = %d';
-  $pdfbulletin = db_fetch_object(db_query($query, $id));
-  $pdfbulletin->subscribers = pdfbulletin_subscribers_load($id);
-  $pending = variable_get('pdfbulletin_pending', array());
-  if (isset($pending[$id])) {
-    $pdfbulletin->date = $pending[$id]['start'];
-    $pdfbulletin->frequency = $pending[$id]['frequency'];
+function pdfbulletin_load(&$node) {
+  $fields = drupal_schema_fields_sql('pdfbulletin_view');
+  $fields_string = implode(', ', $fields); 
+  $query = "SELECT $fields_string FROM {pdfbulletin_view} WHERE nid = %d AND vid = %d";
+  $result = db_query($query, $node->nid, $node->vid);
+  if ($result) {
+    $pdfbulletin = db_fetch_object($result);
   }
-  else {
-    // it has started; we could load the schedual here.
-    $pdfbulletin->date = time();
-    $pdfbulletin->frequency = 604800;
-  }
+
+  $pdfbulletin->schedule = pdfbulletin_schedule_load($node->nid);
+  $pdfbulletin->subscribers = pdfbulletin_subscribers_load($node->nid);
+
   $pdfbulletin->args = unserialize($pdfbulletin->args);
   $pdfbulletin->filters = unserialize($pdfbulletin->filters);
-  $pdfbulletin->header_safe = check_markup($pdfbulletin->header, 2);
-  $pdfbulletin->footer_safe = check_markup($pdfbulletin->footer, 2);
+  $pdfbulletin->header_safe = check_markup($pdfbulletin->header, $pdfbulletin->header_format);
+  $pdfbulletin->footer_safe = check_markup($pdfbulletin->footer, $pdfbulletin->footer_format);
+  $node->pdfbulletin = $pdfbulletin;
+
   return $pdfbulletin;
-} 
+}
+
+/**
+ * Implementaino of hook_view().
+ */
+function pdfbulletin_view($node, $teaser = 0, $page = 0) {
+}
+
+/** 
+ * Implementation of hook_insert().
+ */
+function pdfbulletin_insert(&$node) {
+  $pdfbulletin = $node->pdfbulletin;
+  $pdfbulletin->nid = $node->nid;
+  $pdfbulletin->vid = $node->vid;
+  drupal_write_record('pdfbulletin_view', $pdfbulletin);
+}
+
+/**
+ * Implementation of hook_update().
+ */
+function pdfbulletin_update(&$node) {
+  /**
+   * Not saving directly from node; mainly because of field names
+   * legacy. If view wants changing in the future, change it in the 
+   * pdfbulletin is probably as good anyway.
+   */
+  $pdfbulletin = $node->pdfbulletin;
+  foreach (array('header', 'footer', 'empty_text', 'email') as $field) {
+    $pdfbulletin->{$field} = $node->{$field};
+    $pdfbulletin->{$field . '_format'} = $node->{$field . '_format'};
+  }
+  $pdfbulletin->nid = $node->nid;
+  $pdfbulletin->vid = $node->vid;
+
+  if ($node->revision) {
+    drupal_write_record('pdfbulletin_view', $pdfbulletin);
+  }
+  else {
+    drupal_write_record('pdfbulletin_view', $pdfbulletin, array('nid', 'vid'));
+  }
+}
+
+/**
+ * Implementation of hook_delete().
+ */
+function pdfbulletin_delete(&$node) {
+  db_query("DELETE FROM {pdfbulletin_view} WHERE nid = %d", $node->nid);
+  db_query("DELETE FROM {pdfbulletin_schedule} WHERE nid = %d", $node->nid);
+  $job = array(
+    'callback' => 'pdfbulletin_send_view',
+    'type' => '',
+    'id' => $node->nid,
+  );
+  job_scheduler()->remove($job);
+  db_query("DELETE FROM {pdfbulletin_subs} WHERE nid = %d", $node->nid);  
+}
+
+/**
+ * Implementation of hook_form().
+ */
+function pdfbulletin_form(&$node, $form_state) {
+  module_load_include('inc', 'pdfbulletin', 'pdfbulletin.pages');
+  return pdfbulletin_edit_form($node, $form_state);
+}
 
 /**
  * Load subscribers array.
  */
-function pdfbulletin_subscribers_load($id) {
+function pdfbulletin_subscribers_load($nid) {
   $subscribers = array();
 
-  $query = 'SELECT email FROM {pdfbulletin_subs} WHERE id = %d';
-  $result = db_query($query, $id);
+  $query = 'SELECT email FROM {pdfbulletin_subs} WHERE nid = %d';
+  $result = db_query($query, $nid);
   while ($row = db_fetch_object($result)) {
     $subscribers[$row->email] = $row->email;
   }
@@ -81,12 +170,61 @@ function pdfbulletin_subscribers_load($id) {
 /**
  * Save subscribers array.
  */
-function pdfbulletin_subscribers_save($id, $subscribers) {
-  db_query('DELETE FROM pdfbulletin_subs WHERE id = %d', $id);
+function pdfbulletin_subscribers_save($nid, $subscribers) {
+  db_query('DELETE FROM pdfbulletin_subs WHERE nid = %d', $nid);
   foreach ($subscribers as $subscriber) {
-    $record = array('id' => $id, 'email' => $subscriber);
+    $record = array('nid' => $nid, 'email' => $subscriber);
     drupal_write_record('pdfbulletin_subs', $record);
   }
+}
+
+/**
+ * Load schedule.
+ */
+function pdfbulletin_schedule_load($nid) {
+  $query = 'SELECT * FROM {pdfbulletin_schedule} WHERE nid = %d';
+  $result = db_query($query, $nid);
+  if ($result) {
+    $schedule = db_fetch_array($result);
+  }
+  if (is_array($schedule)) {
+    return $schedule;
+  }
+  else {
+    return array(
+      'nid' => $nid,
+      'frequency' => 604800,
+      'date' => time(),
+      'send_empty' => 0,
+      'scheduled' => 0,
+    );
+  }
+}
+
+/**
+ * Save schedule.
+ */
+function pdfbulletin_schedule_save($schedule) {
+  $old_schedule = pdfbulletin_schedule_load($schedule['nid']);
+
+  $altered = FALSE;
+
+  foreach ($old_schedule as $key => $value) {
+    if ($old_schedule[$key] != $schedule[$key]) {
+      $altered = TRUE;
+    }
+  }
+  if ($altered) {
+    $schedule['scheduled'] = $schedule['scheduled'] | PDFBULLETIN_SCHEDULED_TODO;
+    if (db_result(db_query('SELECT nid FROM {pdfbulletin_schedule} WHERE nid = %d', $schedule['nid']))) {
+      drupal_write_record('pdfbulletin_schedule', $schedule, 'nid');
+    }
+    else {
+      drupal_write_record('pdfbulletin_schedule', $schedule);
+    }
+  }
+
+  return $schedule;
 }
 
 /**
@@ -118,19 +256,46 @@ function pdfbulletin_theme($existing, $type, $theme, $path) {
  */
 function pdfbulletin_perm() {
   return array(
-    'edit pdf bulletins',
+    'create pdf bulletins', 'edit own pdf bulletins', 'edit any pdf bulletins', 'delete any pdf bulletins', 'delete own pdf bulletins',
   );
 }
 
 /**
- * Implementation of hook_views_api().
+ * Implementation of hook_access().
  */
+function pdfbulletin_access($op, $node, $account) {
+  switch ($op) {
+    case 'create':
+      if (user_access('create pdf bulletins', $account)) {
+        return TRUE;
+      }
+      break;
+
+    case 'update':
+      if (user_access('edit any pdf bulletins', $account) || ($account->uid == $node->uid && user_access('edit own pdf bulletin', $account))) {
+        return TRUE;
+      }
+      break;
+
+    case 'break':
+      if (user_access('delete any pdf bulletins', $account) || ($account->uid == $node->uid && user_access('delete own pdf bulletin', $account))) {
+        return TRUE;
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_views_api().
+ *
+ * @todo; do we need to expose the node fields? Or is the basic node goode enough.
 function pdfbulletin_views_api() {
   return array(
     'api' => 2.0,
     'path' => drupal_get_path('module', 'pdfbulletin') . '/views',
   );
 }
+*/
 
 /**
  * Implementation of hook_form_FORM_ID_alter().
@@ -156,18 +321,26 @@ function pdfbulletin_form_views_exposed_form_alter(&$form, &$form_state) {
  * @see pdfbulletin_form_views_exposed_form_alter().
  */
 function pdfbulletin_views_exposed_form_submit($form, &$form_state) {
+  global $user;
   $view =& $form_state['view'];
 
-  // the settings we need to store from the view
-  $pdfbulletin['name'] = $view->name;
-  $pdfbulletin['display_id'] = $view->current_display; // @todo check correct value
-  $pdfbulletin['args'] = $view->args;
-  $pdfbulletin['filters'] = $view->exposed_input;
-  if (isset($pdfbulletin['filters']['op'])) {
-    unset($pdfbulletin['filters']['op']);
-  }
+  $node = new stdClass;
+  $node->type = 'pdfbulletin';
+  $node->title = ''; // yes we can get away with this
+  $node->uid = $user->uid;
+  $node->name = $user->name;
 
-  drupal_write_record('pdfbulletin_view', $pdfbulletin);
+  // the settings we need to store from the view
+  $pdfbulletin = new stdClass;
+  $pdfbulletin->view_name = $view->name;
+  $pdfbulletin->display_id = $view->current_display; // @todo check correct value
+  $pdfbulletin->args = $view->args;
+  $pdfbulletin->filters = $view->exposed_input;
+  if (isset($pdfbulletin->filters['op'])) {
+    unset($pdfbulletin->filters['op']);
+  }
+  $node->pdfbulletin = $pdfbulletin;
+  node_save($node);
 
   $destination = '';
   if (isset($_REQUEST['destination'])) {
@@ -175,7 +348,7 @@ function pdfbulletin_views_exposed_form_submit($form, &$form_state) {
     unset($_REQUEST['destination']);
   }
 
-  drupal_goto('pdfbulletin/' . $pdfbulletin['id'] . '/settings', $destination);
+  drupal_goto('node/' . $node->nid . '/edit', $destination);
 }
 
 /**
@@ -184,22 +357,21 @@ function pdfbulletin_views_exposed_form_submit($form, &$form_state) {
  * Add any new, and ready to begin, pdf bulletins to job_schedule.
  */
 function pdfbulletin_cron() {
-  $pending = variable_get('pdfbulletin_pending', array());
-  foreach ($pending as $id => $data) {
-    if ($data['start'] < time()) {
-      $job = array(
-        'callback' => 'pdfbulletin_send_view',
-        'type' => '',
-        'id' => $id,
-        'period' => $data['frequency'],
-        'periodic' => TRUE,
-      );
-      job_scheduler()->remove($job);
-      job_scheduler()->set($job);
-      unset($pending[$id]);
-    }
+  $query_todo = "SELECT * FROM {pdfbulletin_schedule} WHERE date < %d AND scheduled | %d";
+  $query_done = "UPDATE {pdfbulletin_schedule} SET scheduled = %d WHERE nid = %n";
+  $result = db_query($query, time(), PDFBULLETIN_SCHEDULED_TODO);
+  while($schedule = db_fetch_array($result)) {
+    $job = array(
+      'callback' => 'pdfbulletin_send_view',
+      'type' => '',
+      'id' => $schedule['nid'],
+      'period' => $schedule['frequency'],
+      'periodic' => TRUE,
+    );
+    job_scheduler()->remove($job);
+    job_scheduler()->set($job);
+    db_query($query_done, $schedule['scheduled'] & ~PDFBULLETIN_SCHEDULED_TODO, $schedule['nid']);
   }
-  variable_set('pdfbulletin_pending', $pending);
 } 
 
 /**
@@ -208,7 +380,8 @@ function pdfbulletin_cron() {
  * Generates a pdfbulletin and mails it to subscribers.
  */
 function pdfbulletin_send_bulletin($job) {
-  $pdfbulletin = pdfbulletin_load($job['id']);
+  node_load($job['id']);
+  $pdfbulletin = $node->pdfbulletin;
   pdfbulletin_generate_bulletin($pdfbulletin);
   pdfbulletin_send_email($pdfbulletin);
 }
@@ -289,7 +462,7 @@ function pdfbulletin_save_pdf($pdfbulletin, $tmp_file) {
     watchdog('pdfbulletin', 'Unable to create pdfbulletin directory @path', array('@path' => $path), WATCHDOG_ERROR);
     return FALSE;
   }
-  $filepath = file_create_filename($pdfbulletin->id . '.pdf', $path);
+  $filepath = file_create_filename($pdfbulletin->nid . '.pdf', $path);
   if (! file_move($tmp_file, $filepath)) {
     return FALSE;
   }
@@ -392,7 +565,7 @@ function pdfbulletin_generate_pdf($pdfbulletin, $html) {
  *  String html of output.
  */
 function pdfbulletin_generate_html($pdfbulletin, $shorten = 0) {
-  $view = views_get_view($pdfbulletin->name);
+  $view = views_get_view($pdfbulletin->view_name);
   if (! $view) { // 
     // @todo what level of access control should we have!? 
     // || !$view->access($pdfbulletin->display_id)) {

@@ -9,29 +9,21 @@
  * @see pdfbulletin_edit_form_submit().
  * @ingroup forms.
  */
-function pdfbulletin_edit_form($form_state, $pdfbulletin) {
+function pdfbulletin_edit_form(&$node, $form_state) {
+  $type = node_get_types('type', $node);
+  $pdfbulletin = $node->pdfbulletin;
   $form['pdfbulletin'] = array(
     '#type' => 'value',
     '#value' => $pdfbulletin,
   );
-  $form['id'] = array(
-    '#title' => t('Bulletin ID'),
+  $form['title'] = array(
     '#type' => 'textfield',
-    '#value' => $pdfbulletin->id,
-    '#disabled' => TRUE,
+    '#title' => check_plain($type->title_label),
+    '#required' => TRUE,
+    '#default_value' => $node->title,
+    '#weight' => -5,
   );
-  $form['name'] = array(
-    '#title' => t('View name'),
-    '#type' => 'textfield',
-    '#value' => $pdfbulletin->name,
-    '#disabled' => TRUE,
-  );
-  $form['display_id'] = array(
-    '#title' => t('View display'),
-    '#type' => 'textfield',
-    '#value' => $pdfbulletin->display_id,
-    '#disabled' => TRUE,
-  );
+
   $form['header_format'] = array(
     '#tree' => FALSE,
   );
@@ -40,7 +32,8 @@ function pdfbulletin_edit_form($form_state, $pdfbulletin) {
     '#type' => 'textarea',
     '#default_value' => $pdfbulletin->header,
   );
-  $form['header_format']['format'] = filter_form(2, NULL, array('header_format'));
+  $form['header_format']['format'] = filter_form($pdfbulletin->header_format, NULL, array('header_format'));
+
   $form['footer_format'] = array(
     '#tree' => FALSE,
   );
@@ -49,7 +42,40 @@ function pdfbulletin_edit_form($form_state, $pdfbulletin) {
     '#type' => 'textarea',
     '#default_value' => $pdfbulletin->footer,
   );
-  $form['footer_format']['format'] = filter_form(2, NULL, array('footer_format'));
+  $form['footer_format']['format'] = filter_form($pdfbulletin->footer_format, NULL, array('footer_format'));
+
+  $form['email_format'] = array(
+    '#tree' => FALSE, 
+  );
+  $form['email_format']['email'] = array(
+    '#title' => t('Text for e-mail'),
+    '#type' => 'textarea',
+    '#default_value' => $pdfbulletin->email,
+  );
+  $form['email_format']['format'] = filter_form($pdfbulletin->email_format, NULL, array('email_format'));
+
+  $form['empty_text_format'] = array(
+    '#tree' => FALSE,
+  );
+  $form['empty_text_format']['empty_text'] = array(
+    '#title' => t('Empty text'),
+    '#type' => 'textarea',
+    '#default_value' => $pdfbulletin->empty_text,
+    '#description' => t('Text for e-mail if it is sent with an empty view'),
+  );
+  $form['empty_text_format']['format'] = filter_form($pdfbulletin->empty_text_format, NULL, array('empty_text_format'));
+
+  return $form;
+}
+
+function pdfbulletin_settings_form($form_state, &$node) {
+  $pdfbulletin = $node->pdfbulletin;
+  $schedule = $pdfbulletin->schedule;
+
+  $form['pdfbulletin'] = array(
+    '#value' => $pdfbulletin,
+    '#type' => 'hidden',
+  );
   $form['frequency'] = array(
     '#type' => 'select',
     '#options' => array(
@@ -59,21 +85,26 @@ function pdfbulletin_edit_form($form_state, $pdfbulletin) {
       '2419200' => 'monthly',
     ),
     '#title' => t('Frequency'),
-    '#default_value' => $pdfbulletin->frequency,
+    '#default_value' => $schedule['frequency'],
   );
   $form['date'] = array(
     '#type' => 'date',
     '#title' => t('Start date'),
-    '#default_vaule' => $pdfbulletin->date, // @todo formatting
+    '#default_vaule' => $schedule['date'], // @todo formatting
+  );
+  $form['send_empty'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Send e-mail if the view is empty'),
+    '#default_value' => $schedule['send_empty'],
+  );
+  $form['scheduled'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable sending of mail'),
+    '#default_vaule' => $schedule['scheduled'] | PDFBULLETIN_SCHEDULED_YES,
   );
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Submit'),
-  );
-  $form['delete'] = array(
-    '#type' => 'submit',
-    '#submit' => array('pdfbulletin_delete'),
-    '#value' => t('Delete'),
   );
   return $form;
 }
@@ -81,27 +112,23 @@ function pdfbulletin_edit_form($form_state, $pdfbulletin) {
 /**
  * Form validation handler for pdfbulletin_edit_form().
  */
-function pdfbulletin_edit_form_validate(&$form, &$form_state) {
+function pdfbulletin_settings_form_validate(&$form, &$form_state) {
   // @todo SERIOUSLY
 }
 
 /**
  * Form submission handler for pdfbulletin_edit_form().
  */
-function pdfbulletin_edit_form_submit(&$form, &$form_state) {
+function pdfbulletin_settings_form_submit(&$form, &$form_state) {
   $pdfbulletin = $form_state['values']['pdfbulletin'];
+  $schedule = $pdfbulletin->schedule;
 
-  // @todo if changed?
+  $schedule['frequency'] = $form_state['values']['frequency'];
   $start_date = $form_state['values']['date'];
-  $start_time = strtotime($start_date['year'] . '-' . $start_date['month'] . '-' . $start_date['day']);
-  $pending = variable_get('pdfbulletin_pending', array());
-  $pending[$pdfbulletin->id] = array('start' => $start_time, 'frequency' => (int) $form_state['values']['frequency']);
-  variable_set('pdfbulletin_pending', $pending);
-
-  $pdfbulletin->header = $form_state['values']['header'];
-  $pdfbulletin->footer = $form_state['values']['footer'];
-
-  drupal_write_record('pdfbulletin_view', $pdfbulletin, 'id');
+  $schedule['date'] = strtotime($start_date['year'] . '-' . $start_date['month'] . '-' . $start_date['day']);
+  $schedule['send_empty'] = $form_state['values']['send_empty'];
+  $schedule['scheduled'] = $schedule['scheduled'] & $form_state['values']['scheduled'] ? PDFBULLETIN_SCHEDULED_YES : PDFBULLETIN_SCHEDULED_NO;
+  pdfbulletin_schedule_save($schedule);
 }
 
 /**
@@ -114,21 +141,16 @@ function pdfbulletin_edit_form_submit(&$form, &$form_state) {
  * @see pdfbulletin_subscribers_form_sumbit().
  * @ingroup forms.
  */
-function pdfbulletin_subscribers_form($form_state, $pdfbulletin) {
+function pdfbulletin_subscribers_form($form_state, &$node) {
+  $pdfbulletin = $node->pdfbulletin;
   $subscribers = '';
   foreach ($pdfbulletin->subscribers as $email) {
     $subscribers .= check_plain($email) . "\n";
   }
 
   $form['pdfbulletin'] = array(
-    '#type' => 'value',
+    '#type' => 'hidden',
     '#value' => $pdfbulletin,
-  );
-  $form['id'] = array(
-    '#title' => t('Bulletin ID'),
-    '#type' => 'textfield',
-    '#value' => $pdfbulletin->id,
-    '#disabled' => TRUE,
   );
   $form['subscribers'] = array(
     '#type' => 'textarea',
@@ -174,7 +196,7 @@ function pdfbulletin_subscribers_form_submit($form, &$form_state) {
       $subscriptions[$email] = $email;
     }
   }
-  pdfbulletin_subscribers_save($form_state['values']['pdfbulletin']->id, $subscriptions);
+  pdfbulletin_subscribers_save($form_state['values']['pdfbulletin']->nid, $subscriptions);
   drupal_set_message(t('Subscriptions saved'));
 }
 
@@ -188,7 +210,8 @@ function pdfbulletin_subscribers_form_submit($form, &$form_state) {
  * @see pdfbulletin_sendtest_form_submit().
  * @ingroup forms.
  */
-function pdfbulletin_sendtest_form($form_state, $pdfbulletin) {
+function pdfbulletin_sendtest_form($form_state, $node) {
+  $pdfbulletin = $node->pdfbulletin;
   pdfbulletin_generate_bulletin($pdfbulletin);
   $stage1 = '<h2>' . t('Step 1: Download a copy of the pdf') . '</h2>';
   $stage1 .= theme('pdfbulletin_generate_pdf_link', $pdfbulletin->file->filepath, $pdfbulletin);
@@ -203,10 +226,6 @@ function pdfbulletin_sendtest_form($form_state, $pdfbulletin) {
   $form['pdfbulletin'] = array(
     '#type' => 'value',
     '#value' => $pdfbulletin,
-  );
-  $form['id'] = array(
-    '#type' => 'value',
-    '#value' => $pdfbulletin->id,
   );
   $form['subscribers'] = array(
     '#type' => 'textarea',
@@ -270,4 +289,4 @@ function pdfbulletin_sendtest_form_submit($form, &$form_state) {
 function pdfbulletin_generate_pdf_page($pdfbulletin) {
   pdfbulletin_generate_bulletin($pdfbulletin);
   return theme('pdfbulletin_generate_pdf_page', $pdfbulletin, $pdfbulletin->file->filepath, $pdfbulletin->html, $pdfbulletin->header_safe, $pdfbulletin->footer_safe);
-} 
+}
