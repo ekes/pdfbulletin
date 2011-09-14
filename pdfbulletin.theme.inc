@@ -10,7 +10,7 @@
  */
 function theme_pdfbulletin_email_html($pdfbulletin, $html, $header, $footer) {
   $output .= '<div class="pdfbulletin-header">' . $header . '</div>';
-  $output .= '<div class="pdfbulletin-email-intro">Please find attached a printable copy.</div>'; // @todo configurable.
+  $output .= '<div class="pdfbulletin-email-intro">' . $html . '</div>'; 
   $output .= '<div class="pdfbulletin-footer">' . $footer . '</div>'; 
   return $output;
 }

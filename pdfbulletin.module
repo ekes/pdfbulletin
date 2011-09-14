@@ -35,7 +35,7 @@ function pdfbulletin_menu() {
     'weight' => 20,
   );
   $items['node/%node/settings'] = array(
-    'title' => 'E-mail settings',
+    'title' => 'Schedule',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('pdfbulletin_settings_form', 1),
     'access arguments' => array('edit pdf bulletins'),
@@ -83,6 +83,8 @@ function pdfbulletin_load(&$node) {
   $pdfbulletin->filters = unserialize($pdfbulletin->filters);
   $pdfbulletin->header_safe = check_markup($pdfbulletin->header, $pdfbulletin->header_format);
   $pdfbulletin->footer_safe = check_markup($pdfbulletin->footer, $pdfbulletin->footer_format);
+  $pdfbulletin->email_safe = check_markup($pdfbulletin->email, $pdfbulletin->email_format);
+  $pdfbulletin->empty_text_safe = check_markup($pdfbulletin->empty_text, $pdfbulletin->empty_text_format);
   $node->pdfbulletin = $pdfbulletin;
 
   return $pdfbulletin;
@@ -92,6 +94,7 @@ function pdfbulletin_load(&$node) {
  * Implementaino of hook_view().
  */
 function pdfbulletin_view($node, $teaser = 0, $page = 0) {
+  return $node;
 }
 
 /** 
@@ -383,7 +386,7 @@ function pdfbulletin_send_bulletin($job) {
   node_load($job['id']);
   $pdfbulletin = $node->pdfbulletin;
   pdfbulletin_generate_bulletin($pdfbulletin);
-  pdfbulletin_send_email($pdfbulletin);
+  pdfbulletin_send_email($pdfbulletin, $node);
 }
 
 /**
@@ -392,10 +395,10 @@ function pdfbulletin_send_bulletin($job) {
  * @param $pdfbulletin
  *   pdfbulletin object with html and (pdf) file variables set.
  */
-function pdfbulletin_send_email($pdfbulletin) {
+function pdfbulletin_send_email($pdfbulletin, &$node) {
   $sender = ''; // @todo sender
-  $subject = 'incourage: Upcoming events notice'; // @todo from title of view?
-  $body = theme('pdfbulletin_email_html', $pdfbulletin, $pdfbulletin->html, $pdfbulletin->header_safe, $pdfbulletin->footer_safe);
+  $subject = check_plain($node->title);
+  $body = theme('pdfbulletin_email_html', $pdfbulletin, $pdfbulletin->email_safe, $pdfbulletin->header_safe, $pdfbulletin->footer_safe);
   $plaintext = FALSE;
   $headers = array();
   $text = ''; // html2txt $body
@@ -603,7 +606,7 @@ function pdfbulletin_generate_html($pdfbulletin, $shorten = 0) {
 function pdfbulletin_util_settings($setting) {
   $settings = array(
     'pdfinfo' => '/usr/bin/pdfinfo',
-    'wkhtmltopdf' => '/usr/local/bin/wkhtmltopdf-i386',
+    'wkhtmltopdf' => '/usr/local/bin/wkhtmltopdf-amd64',
     'paper_size' => 'letter',
     'page_orientation' => 'portrait',
     'dpi' => '300',

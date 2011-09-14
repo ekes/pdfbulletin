@@ -61,7 +61,7 @@ function pdfbulletin_edit_form(&$node, $form_state) {
     '#title' => t('Empty text'),
     '#type' => 'textarea',
     '#default_value' => $pdfbulletin->empty_text,
-    '#description' => t('Text for e-mail if it is sent with an empty view'),
+    '#description' => t('Text for e-mail if it is sent with an empty bulletin.'),
   );
   $form['empty_text_format']['format'] = filter_form($pdfbulletin->empty_text_format, NULL, array('empty_text_format'));
 
@@ -74,7 +74,7 @@ function pdfbulletin_settings_form($form_state, &$node) {
 
   $form['pdfbulletin'] = array(
     '#value' => $pdfbulletin,
-    '#type' => 'hidden',
+    '#type' => 'value',
   );
   $form['frequency'] = array(
     '#type' => 'select',
@@ -94,7 +94,7 @@ function pdfbulletin_settings_form($form_state, &$node) {
   );
   $form['send_empty'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Send e-mail if the view is empty'),
+    '#title' => t('Send e-mail if the bulletin is empty'),
     '#default_value' => $schedule['send_empty'],
   );
   $form['scheduled'] = array(
@@ -149,7 +149,7 @@ function pdfbulletin_subscribers_form($form_state, &$node) {
   }
 
   $form['pdfbulletin'] = array(
-    '#type' => 'hidden',
+    '#type' => 'value',
     '#value' => $pdfbulletin,
   );
   $form['subscribers'] = array(
