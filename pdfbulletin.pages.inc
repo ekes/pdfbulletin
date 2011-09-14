@@ -212,7 +212,13 @@ function pdfbulletin_subscribers_form_submit($form, &$form_state) {
  */
 function pdfbulletin_sendtest_form($form_state, $node) {
   $pdfbulletin = $node->pdfbulletin;
-  pdfbulletin_generate_bulletin($pdfbulletin);
+  if (! pdfbulletin_generate_bulletin($pdfbulletin)) {
+    $form['empty'] = array(
+      '#type' => 'markup',
+      '#value' => t('Empty bulletin, not sent.'),
+    );
+    return $form;
+  }
   $stage1 = '<h2>' . t('Step 1: Download a copy of the pdf') . '</h2>';
   $stage1 .= theme('pdfbulletin_generate_pdf_link', $pdfbulletin->file->filepath, $pdfbulletin);
   $form['stage1'] = array(

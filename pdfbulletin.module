@@ -385,8 +385,9 @@ function pdfbulletin_cron() {
 function pdfbulletin_send_bulletin($job) {
   node_load($job['id']);
   $pdfbulletin = $node->pdfbulletin;
-  pdfbulletin_generate_bulletin($pdfbulletin);
-  pdfbulletin_send_email($pdfbulletin, $node);
+  if (pdfbulletin_generate_bulletin($pdfbulletin)) {
+    pdfbulletin_send_email($pdfbulletin, $node);
+  }
 }
 
 /**
@@ -436,6 +437,10 @@ function pdfbulletin_generate_bulletin(&$pdfbulletin) {
       unlink($tmp_file);
     }
     $html = pdfbulletin_generate_html($pdfbulletin, $shorten);
+    if ($html === FALSE) {
+      // empty and do not send empty
+      return FALSE;
+    }
     $tmp_file = pdfbulletin_generate_pdf($pdfbulletin, $html);
     $shorten++;
   } while (pdfbulletin_pdf_length($tmp_file) > 1 && $shorten < 10);
@@ -446,7 +451,7 @@ function pdfbulletin_generate_bulletin(&$pdfbulletin) {
 
   $pdfbulletin->html = $html;
   $pdfbulletin->file = pdfbulletin_save_pdf($pdfbulletin, $tmp_file);
-  return;
+  return TRUE;
 }
 
 /**
@@ -595,6 +600,14 @@ function pdfbulletin_generate_html($pdfbulletin, $shorten = 0) {
   }
   $view->pager['use_pager'] = 0; // don't want to see pager */
   $output = $view->display_handler->execute();
+  if (! count($view->result)) {
+    if ($pdfbulletin->schedule['send_empty']) {
+      $output = $pdfbulletin->empty_text_safe;
+    }
+    else {
+      return FALSE;
+    }
+  }
   $view->post_execute();
   return $output;
 }
