@@ -102,6 +102,13 @@ function pdfbulletin_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
+       'css_file' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'description' => 'The filename of the css for the pdf.',
+        'not null' => TRUE,
+        'default' => 'basic',
+      ),
     ),
     'primary key' => array('nid'),
     'unique keys' => array(

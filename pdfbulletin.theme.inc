@@ -30,6 +30,7 @@ function theme_pdfbulletin_email_text($pdfbulletin, $text, $header, $footer) {
 function theme_pdfbulletin_email_pdf($pdfbulletin, $html, $header, $footer) {
   $head = '
 <head>
+<link type="text/css" rel="stylesheet" media="all" href="' . $css . '" />
 <style type="text/css">
 .pdfbulletin .view-filters, .pdfbulletin .views-admin-links { display: none; }
 </style>

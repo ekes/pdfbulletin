@@ -127,6 +127,7 @@ function pdfbulletin_update(&$node) {
   $pdfbulletin->nid = $node->nid;
   $pdfbulletin->vid = $node->vid;
   $pdfbulletin->paper_size = $node->paper_size;
+  $pdfbulletin->css_file = $node->css_file;
 
   if ($node->revision) {
     drupal_write_record('pdfbulletin_view', $pdfbulletin);
@@ -248,7 +249,7 @@ function pdfbulletin_theme($existing, $type, $theme, $path) {
       'file' => 'pdfbulletin.theme.inc',
     ),
     'pdfbulletin_email_pdf' => array(
-      'arguments' => array('pdfbulletin' => NULL, 'html' => NULL, 'header' => NULL, 'footer' => NULL),
+      'arguments' => array('pdfbulletin' => NULL, 'html' => NULL, 'header' => NULL, 'footer' => NULL, 'css' => NULL),
       'file' => 'pdfbulletin.theme.inc',
     ),
     'pdfbulletin_generate_pdf_link' => array(
@@ -536,11 +537,12 @@ function pdfbulletin_pdf_length($file) {
 function pdfbulletin_generate_pdf($pdfbulletin, $html) {
   $paper_sizes = pdfbulletin_util_settings('paper_size');
   $paper_size = $paper_sizes[$pdfbulletin->paper_size];
+  $css = url(drupal_get_path('module', 'pdfbulletin') . '/css/' . $pdfbulletin->css_file . '.css', array('absolute' => true));
   $page_orientation = pdfbulletin_util_settings('page_orientation');
   $dpi = pdfbulletin_util_settings('dpi');
   $options = pdfbulletin_util_settings('options');
   $wkhtmltopdf = pdfbulletin_util_settings('wkhtmltopdf');
-  $html = theme('pdfbulletin_email_pdf', $pdfbulletin, $html, $pdfbulletin->header_safe, $pdfbulletin->footer_safe);
+  $html = theme('pdfbulletin_email_pdf', $pdfbulletin, $html, $pdfbulletin->header_safe, $pdfbulletin->footer_safe, $css);
   $output_filename = tempnam(file_directory_temp(), 'pdfbulletin');
 
   $descriptor = array(0 => array('pipe', 'r'), 1 => array('pipe', 'w'), 2 => array('pipe', 'w'));
@@ -615,6 +617,18 @@ function pdfbulletin_generate_html($pdfbulletin, $shorten = 0) {
   }
   $view->post_execute();
   return $output;
+}
+
+/**
+ * Retrieve available css files.
+ */
+function pdfbulletin_css() {
+  $css_files = file_scan_directory(drupal_get_path('module', 'pdfbulletin') . '/css', '.css');
+  $css = array();
+  foreach ($css_files as $file) {
+    $css[$file->name] = $file->name;
+  }
+  return $css;
 }
 
 /**

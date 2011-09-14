@@ -75,6 +75,17 @@ function pdfbulletin_edit_form(&$node, $form_state) {
     $form['paper_size']['#options'][$key] = t($key);
   }
 
+  $css = pdfbulletin_css();
+  $form['css_file'] = array(
+    '#title' => t('Style'),
+    '#type' => 'select',
+    '#default_value' => $pdfbulletin->css_file,
+  );
+  foreach ($css as $key => $value) {
+    $form['css_file']['#options'][$key] = check_plain($value);
+  }
+
+
   return $form;
 }
 
