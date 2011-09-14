@@ -97,8 +97,10 @@ function pdfbulletin_schema() {
       ),
       'paper_size' => array(
         'type' => 'varchar',
+        'length' => 255,
         'description' => 'The name of the paper format for the pdf.',
         'not null' => TRUE,
+        'default' => '',
       ),
     ),
     'primary key' => array('nid'),
