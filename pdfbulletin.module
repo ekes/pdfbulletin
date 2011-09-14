@@ -30,7 +30,8 @@ function pdfbulletin_menu() {
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('pdfbulletin_subscribers_form', 1),
-    'access arguments' => array('edit pdf bulletins'),
+    'access callback' => 'node_access',
+    'access arguments' => array('update', 1),
     'file' => 'pdfbulletin.pages.inc',
     'weight' => 20,
   );
@@ -38,7 +39,8 @@ function pdfbulletin_menu() {
     'title' => 'Schedule',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('pdfbulletin_settings_form', 1),
-    'access arguments' => array('edit pdf bulletins'),
+    'access callback' => 'node_access',
+    'access arguments' => array('update', 1),
     'file' => 'pdfbulletin.pages.inc',
     'type' => MENU_LOCAL_TASK,
     'weight' => 10,
@@ -47,7 +49,8 @@ function pdfbulletin_menu() {
     'title' => 'Test',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('pdfbulletin_sendtest_form', 1),
-    'access arguments' => array('edit pdf bulletins'),
+    'access callback' => 'node_access',
+    'access arguments' => array('update', 1),
     'type' => MENU_LOCAL_TASK,
     'file' => 'pdfbulletin.pages.inc',
     'weight' => 15,
@@ -123,6 +126,7 @@ function pdfbulletin_update(&$node) {
   }
   $pdfbulletin->nid = $node->nid;
   $pdfbulletin->vid = $node->vid;
+  $pdfbulletin->paper_size = $node->paper_size;
 
   if ($node->revision) {
     drupal_write_record('pdfbulletin_view', $pdfbulletin);
@@ -307,7 +311,7 @@ function pdfbulletin_views_api() {
  * @see pdfbulletin_views_exposed_form_submit().
  */
 function pdfbulletin_form_views_exposed_form_alter(&$form, &$form_state) {
-  if (user_access('edit pdf bulletins')) {
+  if (user_access('create pdf bulletins')) {
     $form['pdfbulletin_create'] = array(
       '#type' => 'submit',
       '#value' => t('Create PDF bulletin'),
@@ -530,7 +534,8 @@ function pdfbulletin_pdf_length($file) {
  *   String path to temporary file location of PDF.
  */
 function pdfbulletin_generate_pdf($pdfbulletin, $html) {
-  $paper_size = pdfbulletin_util_settings('paper_size');
+  $paper_sizes = pdfbulletin_util_settings('paper_size');
+  $paper_size = $paper_sizes[$pdfbulletin->paper_size];
   $page_orientation = pdfbulletin_util_settings('page_orientation');
   $dpi = pdfbulletin_util_settings('dpi');
   $options = pdfbulletin_util_settings('options');
@@ -539,7 +544,7 @@ function pdfbulletin_generate_pdf($pdfbulletin, $html) {
   $output_filename = tempnam(file_directory_temp(), 'pdfbulletin');
 
   $descriptor = array(0 => array('pipe', 'r'), 1 => array('pipe', 'w'), 2 => array('pipe', 'w'));
-  $cmd = realpath($wkhtmltopdf) ." -q --page-size $paper_size --orientation $page_orientation --dpi $dpi $options - $output_filename";
+  $cmd = realpath($wkhtmltopdf) ." -q $paper_size --orientation $page_orientation --dpi $dpi $options - $output_filename";
   $process = proc_open($cmd, $descriptor, $pipes, NULL, NULL);
 
   if (is_resource($process)) {
@@ -619,8 +624,11 @@ function pdfbulletin_generate_html($pdfbulletin, $shorten = 0) {
 function pdfbulletin_util_settings($setting) {
   $settings = array(
     'pdfinfo' => '/usr/bin/pdfinfo',
-    'wkhtmltopdf' => '/usr/local/bin/wkhtmltopdf-amd64',
-    'paper_size' => 'letter',
+    'wkhtmltopdf' => '/usr/local/bin/wkhtmltopdf-i386',
+    'paper_size' => array(
+      'letter' => '--page-size letter',
+      'a4' => '--page-size a4',
+    ),
     'page_orientation' => 'portrait',
     'dpi' => '300',
     'options' => '',

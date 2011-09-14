@@ -95,6 +95,11 @@ function pdfbulletin_schema() {
         'not null' => TRUE,
         'default' => 0
       ),
+      'paper_size' => array(
+        'type' => 'varchar',
+        'description' => 'The name of the paper format for the pdf.',
+        'not null' => TRUE,
+      ),
     ),
     'primary key' => array('nid'),
     'unique keys' => array(

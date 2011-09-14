@@ -65,6 +65,16 @@ function pdfbulletin_edit_form(&$node, $form_state) {
   );
   $form['empty_text_format']['format'] = filter_form($pdfbulletin->empty_text_format, NULL, array('empty_text_format'));
 
+  $paper_sizes = pdfbulletin_util_settings('paper_size');
+  $form['paper_size'] = array(
+    '#title' => t('Paper size'),
+    '#type' => 'select',
+    '#default_value' => $pdfbulletin->paper_size,
+  );
+  foreach ($paper_sizes as $key => $value) {
+    $form['paper_size']['#options'][$key] = t($key);
+  }
+
   return $form;
 }
 
