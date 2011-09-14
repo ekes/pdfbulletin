@@ -638,7 +638,7 @@ function pdfbulletin_css() {
 function pdfbulletin_util_settings($setting) {
   $settings = array(
     'pdfinfo' => '/usr/bin/pdfinfo',
-    'wkhtmltopdf' => '/usr/local/bin/wkhtmltopdf-i386',
+    'wkhtmltopdf' => '/usr/local/bin/wkhtmltopdf-amd64',
     'paper_size' => array(
       'letter' => '--page-size letter',
       'a4' => '--page-size a4',
