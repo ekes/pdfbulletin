@@ -308,6 +308,17 @@ function pdfbulletin_views_api() {
 /**
  * Implementation of hook_form_FORM_ID_alter().
  *
+ * Remove preview button from node form, it makes no sense. Testing is the only way.
+ */
+function pdfbulletin_form_pdfbulletin_node_form_alter(&$form, &$form_state) {
+  if (isset($form['buttons']['preview'])) {
+    unset($form['buttons']['preview']);
+  }
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter().
+ *
  * Add PDF Bulletin submit button to appropriate views.
  * @see pdfbulletin_views_exposed_form_submit().
  */
