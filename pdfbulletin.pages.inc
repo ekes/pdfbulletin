@@ -250,9 +250,9 @@ function pdfbulletin_sendtest_form($form_state, $node) {
     '#type' => 'markup',
     '#value' => '<h2>' . t('Step 2: Send a copy with a test e-mail') . '</h2>',
   );
-  $form['pdfbulletin'] = array(
+  $form['node'] = array(
     '#type' => 'value',
-    '#value' => $pdfbulletin,
+    '#value' => $node,
   );
   $form['subscribers'] = array(
     '#type' => 'textarea',
@@ -298,9 +298,10 @@ function pdfbulletin_sendtest_form_submit($form, &$form_state) {
     }
   }
  
-  $pdfbulletin = $form_state['values']['pdfbulletin'];
+  $node = $form_state['values']['node'];
+  $pdfbulletin = $node->pdfbulletin;
   $pdfbulletin->subscribers = $subscriptions;
-  pdfbulletin_send_email($pdfbulletin);
+  pdfbulletin_send_email($pdfbulletin, $node);
 
   drupal_set_message('Test message sent.');
   // @todo make this more redirect friendly
