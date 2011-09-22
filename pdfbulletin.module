@@ -25,6 +25,16 @@ function pdfbulletin_node_info() {
  */
 function pdfbulletin_menu() {
   $items = array();
+
+  $items['admin/settings/pdfbulletin'] = array(
+    'title' => 'PDF bulletin',
+    'description' => 'Program and default settings for PDF bulletin generation.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('pdfbulletin_admin_settings_form'),
+    'access arguments' => array('administer pdf bulletins'),
+    'file' => 'pdfbulletin.admin.inc',
+  );
+
   $items['node/%node/subscribers'] = array(
     'title' => 'Subscribers',
     'type' => MENU_LOCAL_TASK,
@@ -264,7 +274,7 @@ function pdfbulletin_theme($existing, $type, $theme, $path) {
  */
 function pdfbulletin_perm() {
   return array(
-    'create pdf bulletins', 'edit own pdf bulletins', 'edit any pdf bulletins', 'delete any pdf bulletins', 'delete own pdf bulletins',
+    'create pdf bulletins', 'edit own pdf bulletins', 'edit any pdf bulletins', 'delete any pdf bulletins', 'delete own pdf bulletins', 'administer pdf bulletins',
   );
 }
 
@@ -659,5 +669,5 @@ function pdfbulletin_util_settings($setting) {
     'options' => '',
   );
 
-  return $settings[$setting];
+  return variable_get('pdfbulletin_' . $setting, $settings[$setting]);
 }
