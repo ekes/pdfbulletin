@@ -27,7 +27,7 @@ function theme_pdfbulletin_email_text($pdfbulletin, $text, $header, $footer) {
  *
  * @todo add title.
  */
-function theme_pdfbulletin_email_pdf($pdfbulletin, $html, $header, $footer) {
+function theme_pdfbulletin_email_pdf($pdfbulletin, $html, $header, $footer, $css) {
   $head = '
 <head>
 <link type="text/css" rel="stylesheet" media="all" href="' . $css . '" />
