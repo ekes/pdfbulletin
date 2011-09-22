@@ -104,9 +104,14 @@ function pdfbulletin_load(&$node) {
 }
 
 /**
- * Implementaino of hook_view().
+ * Implementaion of hook_view().
  */
 function pdfbulletin_view($node, $teaser = 0, $page = 0) {
+  $node = node_prepare($node, $teaser);
+  $node->content['pdfbulletin'] = array(
+    '#value' => theme('pdfbulletin_node_view', $node, $teaser, $page),
+    '#weight' => 0,
+  );
   return $node;
 }
 
@@ -265,6 +270,11 @@ function pdfbulletin_theme($existing, $type, $theme, $path) {
     'pdfbulletin_generate_pdf_link' => array(
       'arguments' => array('filepath' => NULL, 'pdfbulletin' => NULL),
       'file' => 'pdfbulletin.theme.inc',
+    ),
+    'pdfbulletin_node_view' => array(
+      'arguments' => array('node' => NULL, 'teaser' => FALSE, 'page' => FALSE),
+      'file' => 'pdfbulletin.theme.inc',
+      'template' => 'pdfbulletin-node-view',
     ),
   );
 }
