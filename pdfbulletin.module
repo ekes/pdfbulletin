@@ -65,6 +65,13 @@ function pdfbulletin_menu() {
     'file' => 'pdfbulletin.pages.inc',
     'weight' => 15,
   );
+  $items['node/%node/html'] = array(
+    'title' => 'HTML test',
+    'page callback' => 'pdfbulletin_html_test',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
   return $items;
 }
 
@@ -453,6 +460,13 @@ function pdfbulletin_send_email($pdfbulletin, &$node) {
   return;
 }
 
+function pdfbulletin_html_test(&$pdfbulletin) {
+  pdfbulletin_generate_bulletin($pdfbulletin);
+  $css = url(drupal_get_path('module', 'pdfbulletin') . '/css/' . $pdfbulletin->css_file . '.css', array('absolute' => true));
+  print theme('pdfbulletin_email_pdf', $pdfbulletin, $pdfbulletin->html, $pdfbulletin->header_safe, $pdfbulletin->footer_safe, $css);
+  die();
+}
+
 /**
  * Generate pdf bulletin file.
  *
@@ -577,7 +591,8 @@ function pdfbulletin_generate_pdf($pdfbulletin, $html) {
   $output_filename = tempnam(file_directory_temp(), 'pdfbulletin');
 
   $descriptor = array(0 => array('pipe', 'r'), 1 => array('pipe', 'w'), 2 => array('pipe', 'w'));
-  $cmd = realpath($wkhtmltopdf) ." -q $paper_size --orientation $page_orientation --dpi $dpi $options - $output_filename";
+//  $cmd = realpath($wkhtmltopdf) ." -q $paper_size --orientation $page_orientation --dpi $dpi $options - $output_filename";
+  $cmd = realpath($wkhtmltopdf) ." -q $paper_size --orientation $page_orientation $options - $output_filename";
   $process = proc_open($cmd, $descriptor, $pipes, NULL, NULL);
 
   if (is_resource($process)) {
@@ -620,6 +635,7 @@ function pdfbulletin_generate_html($pdfbulletin, $shorten = 0) {
   if (! $view->set_display($pdfbulletin->display_id)) {
     return;
   }
+  $view->pdfbulletin = $pdfbulletin;
 
   // Set filters.
   // I've tried to remove 'exposed' here; but some filters (eg taxonomy)
@@ -672,7 +688,10 @@ function pdfbulletin_util_settings($setting) {
     'wkhtmltopdf' => '/usr/local/bin/wkhtmltopdf-amd64',
     'paper_size' => array(
       'letter' => '--page-size letter',
+      'half letter' => '--page-width 5.5in --page-height 8.5in',
+      'Buyers Guide advert' => '--page-width 4.8in --page-height 5.25in',
       'a4' => '--page-size a4',
+      'a5' => '--page-size a5',
     ),
     'page_orientation' => 'portrait',
     'dpi' => '300',

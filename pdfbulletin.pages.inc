@@ -24,6 +24,26 @@ function pdfbulletin_edit_form(&$node, $form_state) {
     '#weight' => -5,
   );
 
+  $paper_sizes = pdfbulletin_util_settings('paper_size');
+  $form['paper_size'] = array(
+    '#title' => t('Paper size'),
+    '#type' => 'select',
+    '#default_value' => $pdfbulletin->paper_size,
+  );
+  foreach ($paper_sizes as $key => $value) {
+    $form['paper_size']['#options'][$key] = t($key);
+  }
+
+  $css = pdfbulletin_css();
+  $form['css_file'] = array(
+    '#title' => t('Style'),
+    '#type' => 'select',
+    '#default_value' => $pdfbulletin->css_file,
+  );
+  foreach ($css as $key => $value) {
+    $form['css_file']['#options'][$key] = check_plain($value);
+  }
+
   $form['header_format'] = array(
     '#tree' => FALSE,
   );
@@ -64,27 +84,6 @@ function pdfbulletin_edit_form(&$node, $form_state) {
     '#description' => t('Text for e-mail if it is sent with an empty bulletin.'),
   );
   $form['empty_text_format']['format'] = filter_form($pdfbulletin->empty_text_format, NULL, array('empty_text_format'));
-
-  $paper_sizes = pdfbulletin_util_settings('paper_size');
-  $form['paper_size'] = array(
-    '#title' => t('Paper size'),
-    '#type' => 'select',
-    '#default_value' => $pdfbulletin->paper_size,
-  );
-  foreach ($paper_sizes as $key => $value) {
-    $form['paper_size']['#options'][$key] = t($key);
-  }
-
-  $css = pdfbulletin_css();
-  $form['css_file'] = array(
-    '#title' => t('Style'),
-    '#type' => 'select',
-    '#default_value' => $pdfbulletin->css_file,
-  );
-  foreach ($css as $key => $value) {
-    $form['css_file']['#options'][$key] = check_plain($value);
-  }
-
 
   return $form;
 }

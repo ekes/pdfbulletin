@@ -1,6 +1,22 @@
 body {
-  font-size: 12px;
+  font-size: 8pt;
   font-family: serif;
+  width: 100%;
+  margin: 0 0 0 0;
+  padding: 0 0 0 0;
+}
+
+.pdfbulletin-header {
+  width: 100%;
+}
+
+.pdfbulletin {
+  font-size: 10pt !important;
+  width: 100%;
+}
+
+.pdfbulletin-footer {
+  width: 100%;
 }
 
 a {
