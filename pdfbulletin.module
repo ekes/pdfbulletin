@@ -588,11 +588,12 @@ function pdfbulletin_generate_pdf($pdfbulletin, $html) {
   $options = pdfbulletin_util_settings('options');
   $wkhtmltopdf = pdfbulletin_util_settings('wkhtmltopdf');
   $html = theme('pdfbulletin_email_pdf', $pdfbulletin, $html, $pdfbulletin->header_safe, $pdfbulletin->footer_safe, $css);
+  $title = check_plain($pdfbulletin->title);
   $output_filename = tempnam(file_directory_temp(), 'pdfbulletin');
 
   $descriptor = array(0 => array('pipe', 'r'), 1 => array('pipe', 'w'), 2 => array('pipe', 'w'));
 //  $cmd = realpath($wkhtmltopdf) ." -q $paper_size --orientation $page_orientation --dpi $dpi $options - $output_filename";
-  $cmd = realpath($wkhtmltopdf) ." -q $paper_size --orientation $page_orientation $options - $output_filename";
+  $cmd = realpath($wkhtmltopdf) ." --title '$title' -q $paper_size --orientation $page_orientation --image-dpi 10000 --image-quality 100 $options - $output_filename";
   $process = proc_open($cmd, $descriptor, $pipes, NULL, NULL);
 
   if (is_resource($process)) {
@@ -687,14 +688,14 @@ function pdfbulletin_util_settings($setting) {
     'pdfinfo' => '/usr/bin/pdfinfo',
     'wkhtmltopdf' => '/usr/local/bin/wkhtmltopdf-amd64',
     'paper_size' => array(
-      'letter' => '--page-size letter',
+      'letter' => '--margin-top 1in --margin-right 1in --margin-bottom 1in --margin-left 1in --page-size letter',
       'half letter' => '--page-width 5.5in --page-height 8.5in',
-      'Buyers Guide advert' => '--page-width 4.8in --page-height 5.25in',
+      'Buyers Guide advert' => '--margin-bottom 1mm --margin-top 0 --margin-left 2mm --margin-right 2mm --page-width 4.8in --page-height 5.25in',
       'a4' => '--page-size a4',
       'a5' => '--page-size a5',
     ),
     'page_orientation' => 'portrait',
-    'dpi' => '300',
+    'dpi' => '100000',
     'options' => '',
   );
 

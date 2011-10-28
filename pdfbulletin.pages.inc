@@ -120,7 +120,7 @@ function pdfbulletin_settings_form($form_state, &$node) {
   $form['scheduled'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable sending of mail'),
-    '#default_vaule' => $schedule['scheduled'] | PDFBULLETIN_SCHEDULED_YES,
+    '#default_value' => $schedule['scheduled'] | PDFBULLETIN_SCHEDULED_YES,
   );
   $form['submit'] = array(
     '#type' => 'submit',

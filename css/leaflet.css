@@ -3,7 +3,7 @@ body {
   width: 100%;
   margin: 0 0 0 0;
   padding: 0 0 0 0;
-  font-size: 7pt;
+  font-size: 8pt;
 }
 
 .pdfbulletin-header {
@@ -21,7 +21,7 @@ body {
 h3,
 h2 {
   padding-bottom: 0;
-  margin: 1pt 0 0 0;
+  margin: 5pt 0 0 0;
   clear: both;
 }
 
