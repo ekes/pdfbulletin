@@ -14,17 +14,6 @@
   <?php print $filters; ?>
 </div>
 
-<div class="schedule">
-  <h3><?php print t('Schedule'); ?></h3>
-  <?php if ($scheduled): ?>
-    <p><?php print t('Scheduled:') ?><br />
-    <?php print $schedule; ?></p>
-  <?php else: ?>
-    <p><?php print t('Not Scheduled') ?></p>
-  <?php endif; ?>
-  <?php print $schedule_link; ?></p>
-</div>
-
 <div class="test">
   <h3><?php print t('Test'); ?></h3>
   <p><?php print $test_link; ?></p>

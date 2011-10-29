@@ -6,6 +6,15 @@
  */
 
 /**
+ * Implementation of hook_requirements().
+ */
+function pdfbulletin_hook_requirements($phase) {
+  // we want an (install profile) safe way of 
+  // checking cck is installed, because we call
+  // that below.
+}
+
+/**
  * Implementation of hook_schema().
  */
 function pdfbulletin_schema() {
@@ -119,47 +128,6 @@ function pdfbulletin_schema() {
     ),
   );
 
-  $schema['pdfbulletin_schedule'] = array(
-    'description' => 'Schedule for PDF bulletins',
-    'fields' => array(
-      'nid' => array(
-        'description' => '{pdfbulletin_view}.nid',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-      ),
-      // for the moment the frequency is only seconds
-      'frequency' => array(
-        'description' => 'Number of seconds between sending bulletins.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 604800, 
-      ),
-      'date' => array(
-        'description' => 'Unix timestamp for the date time of first bulletin to be sent.',
-        'type' => 'int',
-        'not null' => TRUE,
-        'unsigned' => TRUE,
-        'default' => 0,
-      ),
-      'send_empty' => array(
-        'description' => 'Bool if the bulletin should be sent if empty.',
-        'type' => 'int',
-        'size' => 'tiny',
-        'unsigned' => TRUE,
-        'default' => 1,
-      ),
-      'scheduled' => array(
-        'description' => 'If the bulletin is or should be scheduled.',
-        'type' => 'int',
-        'size' => 'tiny',
-        'unsigned' => TRUE,
-        'default' => 1,
-      ),
-    ),
-    'indexes' => array('nid' => array('nid'), 'scheduled' => array('scheduled')),
-  );
   $schema['pdfbulletin_subs'] = array(
     'description' => 'Subscriptions to PDF bulletins',
     'fields' => array(
@@ -187,6 +155,13 @@ function pdfbulletin_schema() {
  */
 function pdfbulletin_install() {
   drupal_install_schema('pdfbulletin');
+  // there is no way this can work, it's not loaded the node definition yet
+  // but it -seems- to put it into the db just fine?
+  module_load_include('inc', 'content', 'includes/content.crud');
+  $fields = pdfbulletin_content_definitions(); 
+  foreach($fields as $field) {
+    content_field_instance_create($field, FALSE);
+  }  
 }
 
 /**
@@ -195,4 +170,132 @@ function pdfbulletin_install() {
 function pdfbulletin_uninstall() {
   drupal_uninstall_schema('pdfbulletin');
   variable_del('pdfbulletin_pending');
+}
+
+/**
+ * Update 6001.
+ *
+ * Remove scheduler, and table.
+ * Add schedule date field.
+ */
+function pdfbulletin_update_6101() {
+  $ret = array();
+  // delete old schedules - no migration
+  $ret[] = update_sql("DELETE FROM {pdf_schedule} WHERE callback = 'pdfbulletin_send_view'");
+  db_drop_table($ret, 'pdfbulletin_schedule');
+  // create date field
+  module_load_include('inc', 'content', 'includes/content.crud');
+  $field = pdfbulletin_content_definition('schedule'); 
+  content_field_instance_create($field, FALSE);
+}
+
+/**
+ * CCK Field definitions.
+ */
+function pdfbulletin_content_definitions($field = 'all') {
+  $fields = array (
+    0 => 
+    array (
+      'type_name' => 'pdfbulletin', 
+      'label' => 'Schedule',
+      'field_name' => 'field_schedule',
+      'type' => 'datestamp',
+      'widget_type' => 'date_text_repeat',
+      'change' => 'Change basic information',
+      'weight' => '32',
+      'default_value' => 'blank',
+      'default_value2' => 'same',
+      'default_value_code' => '',
+      'default_value_code2' => '',
+      'input_format' => 'Y-m-d H:i:s',
+      'input_format_custom' => '',
+      'advanced' => 
+      array (
+        'label_position' => 'above',
+        'text_parts' => 
+        array (
+          'year' => 0,
+          'month' => 0,
+          'day' => 0,
+          'hour' => 0,
+          'minute' => 0,
+          'second' => 0,
+        ),
+      ),
+      'increment' => '1',
+      'year_range' => '-1:+3',
+      'label_position' => 'above',
+      'text_parts' => 
+      array (
+      ),
+      'description' => '',
+      'group' => false,
+      'required' => 0,
+      'multiple' => 1,
+      'repeat' => 1,
+      'todate' => '',
+      'granularity' => 
+      array (
+        'year' => 'year',
+        'month' => 'month',
+        'day' => 'day',
+        'hour' => 'hour',
+        'minute' => 'minute',
+      ),
+      'default_format' => 'medium',
+      'tz_handling' => 'site',
+      'timezone_db' => 'UTC',
+      'repeat_collapsed' => '0',
+      'op' => 'Save field settings',
+      'module' => 'date',
+      'widget_module' => 'date',
+      'columns' => 
+      array (
+        'value' => 
+        array (
+          'type' => 'int',
+          'not null' => false,
+          'sortable' => true,
+          'views' => true,
+        ),
+        'rrule' => 
+        array (
+          'type' => 'text',
+          'not null' => false,
+          'sortable' => false,
+          'views' => false,
+        ),
+      ),
+      'display_settings' => 
+      array (
+        'label' => 
+        array (
+          'format' => 'above',
+          'exclude' => 0,
+        ),
+        'teaser' => 
+        array (
+          'format' => 'default',
+          'exclude' => 0,
+        ),
+        'full' => 
+        array (
+          'format' => 'default',
+          'exclude' => 0,
+        ),
+        4 => 
+        array (
+          'format' => 'default',
+          'exclude' => 0,
+        ),
+      ),
+    ),
+  );
+
+  switch ($field) {
+    case 'schedule':
+      return $fields[0];
+    case 'all':
+      return $fields;
+  }
 }

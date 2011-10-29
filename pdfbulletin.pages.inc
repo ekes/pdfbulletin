@@ -88,69 +88,6 @@ function pdfbulletin_edit_form(&$node, $form_state) {
   return $form;
 }
 
-function pdfbulletin_settings_form($form_state, &$node) {
-  $pdfbulletin = $node->pdfbulletin;
-  $schedule = $pdfbulletin->schedule;
-
-  $form['pdfbulletin'] = array(
-    '#value' => $pdfbulletin,
-    '#type' => 'value',
-  );
-  $form['frequency'] = array(
-    '#type' => 'select',
-    '#options' => array(
-      '86400' => 'daily',
-      '604800' => 'weekly',
-      '1209600' => 'bi-weekly',
-      '2419200' => 'monthly',
-    ),
-    '#title' => t('Frequency'),
-    '#default_value' => $schedule['frequency'],
-  );
-  $form['date'] = array(
-    '#type' => 'date',
-    '#title' => t('Start date'),
-    '#default_vaule' => $schedule['date'], // @todo formatting
-  );
-  $form['send_empty'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Send e-mail if the bulletin is empty'),
-    '#default_value' => $schedule['send_empty'],
-  );
-  $form['scheduled'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Enable sending of mail'),
-    '#default_value' => $schedule['scheduled'] | PDFBULLETIN_SCHEDULED_YES,
-  );
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Submit'),
-  );
-  return $form;
-}
-
-/**
- * Form validation handler for pdfbulletin_edit_form().
- */
-function pdfbulletin_settings_form_validate(&$form, &$form_state) {
-  // @todo SERIOUSLY
-}
-
-/**
- * Form submission handler for pdfbulletin_edit_form().
- */
-function pdfbulletin_settings_form_submit(&$form, &$form_state) {
-  $pdfbulletin = $form_state['values']['pdfbulletin'];
-  $schedule = $pdfbulletin->schedule;
-
-  $schedule['frequency'] = $form_state['values']['frequency'];
-  $start_date = $form_state['values']['date'];
-  $schedule['date'] = strtotime($start_date['year'] . '-' . $start_date['month'] . '-' . $start_date['day']);
-  $schedule['send_empty'] = $form_state['values']['send_empty'];
-  $schedule['scheduled'] = $schedule['scheduled'] & $form_state['values']['scheduled'] ? PDFBULLETIN_SCHEDULED_YES : PDFBULLETIN_SCHEDULED_NO;
-  pdfbulletin_schedule_save($schedule);
-}
-
 /**
  * Form constructor for an individual PDF Bulletin subscribers.
  *

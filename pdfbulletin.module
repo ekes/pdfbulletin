@@ -1,9 +1,5 @@
 <?php
 
-define('PDFBULLETIN_SCHEDULED_NO', 0x001);
-define('PDFBULLETIN_SCHEDULED_YES', 0x002);
-define('PDFBULLETIN_SCHEDULED_TODO', 0x004);
-
 /**
  * Implementation of hook_node_info().
  */
@@ -44,16 +40,6 @@ function pdfbulletin_menu() {
     'access arguments' => array('update', 1),
     'file' => 'pdfbulletin.pages.inc',
     'weight' => 20,
-  );
-  $items['node/%node/settings'] = array(
-    'title' => 'Schedule',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('pdfbulletin_settings_form', 1),
-    'access callback' => 'node_access',
-    'access arguments' => array('update', 1),
-    'file' => 'pdfbulletin.pages.inc',
-    'type' => MENU_LOCAL_TASK,
-    'weight' => 10,
   );
   $items['node/%node/sendtest'] = array(
     'title' => 'Test',
@@ -209,55 +195,6 @@ function pdfbulletin_subscribers_save($nid, $subscribers) {
 }
 
 /**
- * Load schedule.
- */
-function pdfbulletin_schedule_load($nid) {
-  $query = 'SELECT * FROM {pdfbulletin_schedule} WHERE nid = %d';
-  $result = db_query($query, $nid);
-  if ($result) {
-    $schedule = db_fetch_array($result);
-  }
-  if (is_array($schedule)) {
-    return $schedule;
-  }
-  else {
-    return array(
-      'nid' => $nid,
-      'frequency' => 604800,
-      'date' => time(),
-      'send_empty' => 0,
-      'scheduled' => 0,
-    );
-  }
-}
-
-/**
- * Save schedule.
- */
-function pdfbulletin_schedule_save($schedule) {
-  $old_schedule = pdfbulletin_schedule_load($schedule['nid']);
-
-  $altered = FALSE;
-
-  foreach ($old_schedule as $key => $value) {
-    if ($old_schedule[$key] != $schedule[$key]) {
-      $altered = TRUE;
-    }
-  }
-  if ($altered) {
-    $schedule['scheduled'] = $schedule['scheduled'] | PDFBULLETIN_SCHEDULED_TODO;
-    if (db_result(db_query('SELECT nid FROM {pdfbulletin_schedule} WHERE nid = %d', $schedule['nid']))) {
-      drupal_write_record('pdfbulletin_schedule', $schedule, 'nid');
-    }
-    else {
-      drupal_write_record('pdfbulletin_schedule', $schedule);
-    }
-  }
-
-  return $schedule;
-}
-
-/**
  * Implementation of hook_theme().
  */
 function pdfbulletin_theme($existing, $type, $theme, $path) {
@@ -398,35 +335,27 @@ function pdfbulletin_views_exposed_form_submit($form, &$form_state) {
 }
 
 /**
- * Implementation of hook_cron().
+ * Implementation of hook_rules_action_info().
  *
- * Add any new, and ready to begin, pdf bulletins to job_schedule.
+ * Actions to be moved into the newsletter module.
  */
-function pdfbulletin_cron() {
-  $query_todo = "SELECT * FROM {pdfbulletin_schedule} WHERE date < %d AND scheduled | %d";
-  $query_done = "UPDATE {pdfbulletin_schedule} SET scheduled = %d WHERE nid = %n";
-  $result = db_query($query, time(), PDFBULLETIN_SCHEDULED_TODO);
-  while($schedule = db_fetch_array($result)) {
-    $job = array(
-      'callback' => 'pdfbulletin_send_view',
-      'type' => '',
-      'id' => $schedule['nid'],
-      'period' => $schedule['frequency'],
-      'periodic' => TRUE,
-    );
-    job_scheduler()->remove($job);
-    job_scheduler()->set($job);
-    db_query($query_done, $schedule['scheduled'] & ~PDFBULLETIN_SCHEDULED_TODO, $schedule['nid']);
-  }
-} 
+function pdfbulletin_rules_action_info() {
+  return array(
+    'pdfbulletin_send_action' => array(
+      'label' => t('Send a PDF bulletin'),
+      'arguments' => array(
+        'node' => array(
+          'type' => 'node',
+          'label' => 'PDF Bulletin to send',
+        ),
+      ),
+      'module' => 'PDF Bulletin',
+      'help' => t('Send a bulletin'),
+    ),
+  );
+}
 
-/**
- * job_schedule callback.
- *
- * Generates a pdfbulletin and mails it to subscribers.
- */
-function pdfbulletin_send_bulletin($job) {
-  node_load($job['id']);
+function pdfbulletin_send_action($node, $settings) {
   $pdfbulletin = $node->pdfbulletin;
   if (pdfbulletin_generate_bulletin($pdfbulletin)) {
     pdfbulletin_send_email($pdfbulletin, $node);

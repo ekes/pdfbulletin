@@ -66,16 +66,6 @@ function template_preprocess_pdfbulletin_node_view(&$vars) {
     $vars['filters'] = theme('table', array('filter', 'value'), $filters);
   }
   $vars['subscribers_number'] = count($pdfbulletin->subscribers);
-  $vars['scheduled'] = $pdfbulletin->schedule['scheduled'];
   $vars['start'] = format_date($pdfbulletin->schedule['date'], 'custom', 'Y-m-d');
-  $frequency = array(
-      '86400' => t('daily'),
-      '604800' => t('weekly'),
-      '1209600' => t('bi-weekly'),
-      '2419200' => t('monthly'),
-  );
-  $vars['frequency'] = $frequency[$pdfbulletin->schedule['frequency']];
-  $vars['schedule'] = t('Sent %frequency starting %date', array('%frequency' => $vars['frequency'], '%date' => $vars['start']));
-  $vars['schedule_link'] = l(t('Change the schedule of this bulletin'), 'node/' . $node->nid . '/settings');
   $vars['test_link'] = l(t('Test this bulletin'), 'node/' . $node->nid . '/sendtest');
 }
