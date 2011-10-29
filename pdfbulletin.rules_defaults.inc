@@ -84,7 +84,7 @@ function pdfbulletin_rules_defaults() {
                 ),
               ),
             ),
-            '#name' => 'rules_action_schedule_set_rules_schedule_pdfbulletin',
+            '#name' => 'rules_action_schedule_set_pdfbulletin_schedule_pdfbulletin',
             '#info' => 
             array (
               'arguments' => 
@@ -114,17 +114,17 @@ function pdfbulletin_rules_defaults() {
               ),
               'module' => 'Rule Scheduler',
               'base' => 'rules_scheduler_action',
-              'set' => 'rules_schedule_pdfbulletin',
+              'set' => 'pdfbulletin_schedule_pdfbulletin',
             ),
             '#weight' => 0,
           ),
         ),
         '#version' => 6003,
       ),
-      'rules_send_pdfbulletin' => 
+      'pdfbulletin_send_pdfbulletin' => 
       array (
         '#type' => 'rule',
-        '#set' => 'rules_schedule_pdfbulletin',
+        '#set' => 'pdfbulletin_schedule_pdfbulletin',
         '#label' => 'Send pdfbulletin',
         '#active' => 1,
         '#weight' => '0',
@@ -195,9 +195,9 @@ function pdfbulletin_rules_defaults() {
               ),
               'module' => 'Rule Scheduler',
               'base' => 'rules_scheduler_action',
-              'set' => 'rules_schedule_pdfbulletin',
+              'set' => 'pdfbulletin_schedule_pdfbulletin',
             ),
-            '#name' => 'rules_action_schedule_set_rules_schedule_pdfbulletin',
+            '#name' => 'rules_action_schedule_set_pdfbulletin_schedule_pdfbulletin',
             '#settings' => 
             array (
               'task_identifier' => 'Schedule pdfbulletin [node:nid]',
