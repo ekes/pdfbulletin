@@ -82,7 +82,6 @@ function pdfbulletin_load(&$node) {
     $pdfbulletin = db_fetch_object($result);
   }
 
-  $pdfbulletin->schedule = pdfbulletin_schedule_load($node->nid);
   $pdfbulletin->subscribers = pdfbulletin_subscribers_load($node->nid);
 
   $pdfbulletin->args = unserialize($pdfbulletin->args);
