@@ -121,49 +121,69 @@ function pdfbulletin_rules_defaults() {
         ),
         '#version' => 6003,
       ),
-      'pdfbulletin_send_pdfbulletin' => 
+      'pdfbulletin_schedule_next' => 
       array (
         '#type' => 'rule',
         '#set' => 'pdfbulletin_schedule_pdfbulletin',
-        '#label' => 'Send pdfbulletin',
+        '#label' => 'Schedule next pdfbulletin',
         '#active' => 1,
         '#weight' => '0',
         '#categories' => 
         array (
+          0 => 'pdfbulletin',
         ),
-        '#status' => 'default',
+        '#status' => 'custom',
         '#conditions' => 
         array (
+          0 => 
+          array (
+            '#type' => 'condition',
+            '#settings' => 
+            array (
+              'number1' => '[node:field_date-next-timestamp]',
+              'number2' => '1',
+              'operation' => 'greater',
+              '#eval input' => 
+              array (
+                'token_rules_input_evaluator' => 
+                array (
+                  'number1' => 
+                  array (
+                    0 => 'node',
+                    1 => ':global',
+                  ),
+                  'number2' => 
+                  array (
+                    0 => ':global',
+                  ),
+                ),
+              ),
+            ),
+            '#name' => 'rules_condition_number_compare',
+            '#info' => 
+            array (
+              'label' => 'Numeric comparison',
+              'arguments' => 
+              array (
+                'number1' => 
+                array (
+                  'label' => 'Number 1',
+                  'type' => 'number',
+                ),
+                'number2' => 
+                array (
+                  'label' => 'Number 2',
+                  'type' => 'number',
+                ),
+              ),
+              'module' => 'Rules',
+            ),
+            '#weight' => 0,
+          ),
         ),
         '#actions' => 
         array (
           0 => 
-          array (
-            '#type' => 'action',
-            '#settings' => 
-            array (
-              '#argument map' => 
-              array (
-                'node' => 'node',
-              ),
-            ),
-            '#name' => 'pdfbulletin_send_action',
-            '#info' => 
-            array (
-              'label' => 'Send a PDF bulletin',
-              'arguments' => 
-              array (
-                'node' => 
-                array (
-                  'type' => 'node',
-                  'label' => 'PDF Bulletin to send',
-                ),
-              ),
-              'module' => 'PDF Bulletin',
-            ),
-            '#weight' => 0,
-          ),
-          1 => 
           array (
             '#weight' => 0,
             '#info' => 
@@ -210,15 +230,62 @@ function pdfbulletin_rules_defaults() {
               array (
                 'token_rules_input_evaluator' => 
                 array (
-                  'task_date' => 
-                  array (
-                    0 => 'node',
-                  ),
                   'task_identifier' => 
                   array (
                     0 => 'node',
+                    1 => ':global',
+                  ),
+                  'task_date' => 
+                  array (
+                    0 => 'node',
+                    1 => ':global',
                   ),
                 ),
+              ),
+            ),
+            '#type' => 'action',
+          ),
+        ),
+        '#version' => 6003,
+      ),
+      'pdfbulletin_send_pdfbulletin' => 
+      array (
+        '#type' => 'rule',
+        '#set' => 'pdfbulletin_schedule_pdfbulletin',
+        '#label' => 'Send pdfbulletin',
+        '#active' => 1,
+        '#weight' => '0',
+        '#categories' => 
+        array (
+        ),
+        '#status' => 'altered',
+        '#conditions' => 
+        array (
+        ),
+        '#actions' => 
+        array (
+          0 => 
+          array (
+            '#weight' => 0,
+            '#info' => 
+            array (
+              'label' => 'Send a PDF bulletin',
+              'arguments' => 
+              array (
+                'node' => 
+                array (
+                  'type' => 'node',
+                  'label' => 'PDF Bulletin to send',
+                ),
+              ),
+              'module' => 'PDF Bulletin',
+            ),
+            '#name' => 'pdfbulletin_send_action',
+            '#settings' => 
+            array (
+              '#argument map' => 
+              array (
+                'node' => 'node',
               ),
             ),
             '#type' => 'action',
