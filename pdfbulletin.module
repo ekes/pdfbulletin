@@ -81,15 +81,14 @@ function pdfbulletin_load(&$node) {
   if ($result) {
     $pdfbulletin = db_fetch_object($result);
   }
-
   $pdfbulletin->subscribers = pdfbulletin_subscribers_load($node->nid);
 
   $pdfbulletin->args = unserialize($pdfbulletin->args);
   $pdfbulletin->filters = unserialize($pdfbulletin->filters);
-  $pdfbulletin->header_safe = check_markup($pdfbulletin->header, $pdfbulletin->header_format);
-  $pdfbulletin->footer_safe = check_markup($pdfbulletin->footer, $pdfbulletin->footer_format);
-  $pdfbulletin->email_safe = check_markup($pdfbulletin->email, $pdfbulletin->email_format);
-  $pdfbulletin->empty_text_safe = check_markup($pdfbulletin->empty_text, $pdfbulletin->empty_text_format);
+  $pdfbulletin->header_safe = check_markup($pdfbulletin->header, $pdfbulletin->header_format, FALSE);
+  $pdfbulletin->footer_safe = check_markup($pdfbulletin->footer, $pdfbulletin->footer_format, FALSE);
+  $pdfbulletin->email_safe = check_markup($pdfbulletin->email, $pdfbulletin->email_format, FALSE);
+  $pdfbulletin->empty_text_safe = check_markup($pdfbulletin->empty_text, $pdfbulletin->empty_text_format, FALSE);
   $node->pdfbulletin = $pdfbulletin;
 
   return $pdfbulletin;
@@ -149,7 +148,6 @@ function pdfbulletin_update(&$node) {
  */
 function pdfbulletin_delete(&$node) {
   db_query("DELETE FROM {pdfbulletin_view} WHERE nid = %d", $node->nid);
-  db_query("DELETE FROM {pdfbulletin_schedule} WHERE nid = %d", $node->nid);
   $job = array(
     'callback' => 'pdfbulletin_send_view',
     'type' => '',
@@ -331,6 +329,46 @@ function pdfbulletin_views_exposed_form_submit($form, &$form_state) {
   }
 
   drupal_goto('node/' . $node->nid . '/edit', $destination);
+}
+
+/**
+ * Implementation of hook_content_extra_fields().
+ */
+function pdfbulletin_content_extra_fields() {
+  $extras = array(
+    'paper_size' => array(
+      'label' => t('Paper size'),
+      'description' => t('Bulletin paper format'),
+      'weight' => 1,
+    ),
+    'css_file' => array(
+      'label' => t('Style'),
+      'description' => t('CSS file to theme the bulletin with'),
+      'weight' => 2,
+    ),
+    'header' => array(
+      'label' => t('Header'),
+      'description' => t('To be displayed at the top of the bulletin'),
+      'weight' => 3,
+    ),
+    'footer' => array(
+      'label' => t('Footer'),
+      'description' => t('To be displayed at the bottom of the bulletin'),
+      'weight' => 4,
+    ),
+    'email' => array(
+      'label' => t('Text for e-mail'),
+      'description' => t('To be placed into the e-mail'),
+      'weight' => 5,
+    ),
+    'empty_text' => array(
+      'label' => t('Empty text'),
+      'description' => t('To be placed into the e-mail if the pdf bulletin has no entries'),
+      'weight' => 6,
+    ),
+  );
+
+  return $extras;
 }
 
 /**
@@ -616,8 +654,8 @@ function pdfbulletin_util_settings($setting) {
     'pdfinfo' => '/usr/bin/pdfinfo',
     'wkhtmltopdf' => '/usr/local/bin/wkhtmltopdf-amd64',
     'paper_size' => array(
-      'letter' => '--margin-top 1in --margin-right 1in --margin-bottom 1in --margin-left 1in --page-size letter',
-      'half letter' => '--page-width 5.5in --page-height 8.5in',
+      'letter' => '--margin-top 0.5in --margin-right 0.5in --margin-bottom 0.5in --margin-left 0.5in --page-size letter',
+      'half letter' => '--margin-top 0.5in --margin-right 0.5in --margin-bottom 0.5in --margin-left 0.5in --page-width 5.5in --page-height 8.5in',
       'Buyers Guide advert' => '--margin-bottom 1mm --margin-top 0 --margin-left 2mm --margin-right 2mm --page-width 4.8in --page-height 5.25in',
       'a4' => '--page-size a4',
       'a5' => '--page-size a5',
