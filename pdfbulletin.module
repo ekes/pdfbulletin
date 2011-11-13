@@ -36,8 +36,8 @@ function pdfbulletin_menu() {
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('pdfbulletin_subscribers_form', 1),
-    'access callback' => 'node_access',
-    'access arguments' => array('update', 1),
+    'access callback' => 'pdfbulletin_nodesetting_access',
+    'access arguments' => array(1),
     'file' => 'pdfbulletin.pages.inc',
     'weight' => 20,
   );
@@ -45,20 +45,24 @@ function pdfbulletin_menu() {
     'title' => 'Test',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('pdfbulletin_sendtest_form', 1),
-    'access callback' => 'node_access',
-    'access arguments' => array('update', 1),
+    'access callback' => 'pdfbulletin_nodesetting_access',
+    'access arguments' => array(1),
     'type' => MENU_LOCAL_TASK,
     'file' => 'pdfbulletin.pages.inc',
     'weight' => 15,
   );
-  $items['node/%node/html'] = array(
-    'title' => 'HTML test',
-    'page callback' => 'pdfbulletin_html_test',
-    'page arguments' => array(1),
-    'access callback' => TRUE,
-    'type' => MENU_CALLBACK,
-  );
   return $items;
+}
+
+/**
+ * Menu access callback.
+ */
+function pdfbulletin_nodesetting_access($node) {
+  if ($node->type == 'pdfbulletin') {
+    return node_access('update', $node);
+  }
+
+  return FALSE;
 }
 
 /**
