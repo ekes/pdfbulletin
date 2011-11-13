@@ -310,7 +310,7 @@ function pdfbulletin_views_exposed_form_submit($form, &$form_state) {
 
   $node = new stdClass;
   $node->type = 'pdfbulletin';
-  $node->title = ''; // yes we can get away with this
+  $node->title = t('Change title to describe this bulletin'); // yes we can get away with this
   $node->uid = $user->uid;
   $node->name = $user->name;
 
