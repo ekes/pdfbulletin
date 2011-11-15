@@ -250,7 +250,7 @@ function pdfbulletin_access($op, $node, $account) {
       }
       break;
 
-    case 'break':
+    case 'delete':
       if (user_access('delete any pdf bulletins', $account) || ($account->uid == $node->uid && user_access('delete own pdf bulletin', $account))) {
         return TRUE;
       }
