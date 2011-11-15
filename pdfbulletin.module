@@ -56,6 +56,8 @@ function pdfbulletin_menu() {
 
 /**
  * Menu access callback.
+ *
+ * TODO: Doh! Merge this back into hook_node_access, just with a check on type.
  */
 function pdfbulletin_nodesetting_access($node) {
   if ($node->type == 'pdfbulletin') {
