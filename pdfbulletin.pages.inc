@@ -24,28 +24,38 @@ function pdfbulletin_edit_form(&$node, $form_state) {
     '#weight' => -5,
   );
 
+  $form['group_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Layout settings'),
+    '#weight' => -4,
+    '#tree' => FALSE,
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+
   $paper_sizes = pdfbulletin_util_settings('paper_size');
-  $form['paper_size'] = array(
+  $form['group_settings']['paper_size'] = array(
     '#title' => t('Paper size'),
     '#type' => 'select',
     '#default_value' => $pdfbulletin->paper_size,
   );
   foreach ($paper_sizes as $key => $value) {
-    $form['paper_size']['#options'][$key] = t($key);
+    $form['group_settings']['paper_size']['#options'][$key] = t($key);
   }
 
   $css = pdfbulletin_css();
-  $form['css_file'] = array(
+  $form['group_settings']['css_file'] = array(
     '#title' => t('Style'),
     '#type' => 'select',
     '#default_value' => $pdfbulletin->css_file,
   );
   foreach ($css as $key => $value) {
-    $form['css_file']['#options'][$key] = check_plain($value);
+    $form['group_settings']['css_file']['#options'][$key] = check_plain($value);
   }
 
   $form['header_format'] = array(
     '#tree' => FALSE,
+    '#weight' => -5,
   );
   $form['header_format']['header'] = array(
     '#title' => t('Header'),
@@ -56,6 +66,7 @@ function pdfbulletin_edit_form(&$node, $form_state) {
 
   $form['footer_format'] = array(
     '#tree' => FALSE,
+    '#weight' => -4,
   );
   $form['footer_format']['footer'] = array(
     '#title' => t('Footer'),
@@ -65,7 +76,8 @@ function pdfbulletin_edit_form(&$node, $form_state) {
   $form['footer_format']['format'] = filter_form($pdfbulletin->footer_format, NULL, array('footer_format'));
 
   $form['email_format'] = array(
-    '#tree' => FALSE, 
+    '#tree' => FALSE,
+    '#weight' => -3,
   );
   $form['email_format']['email'] = array(
     '#title' => t('Text for e-mail'),
@@ -76,6 +88,7 @@ function pdfbulletin_edit_form(&$node, $form_state) {
 
   $form['empty_text_format'] = array(
     '#tree' => FALSE,
+    '#weight' => -2,
   );
   $form['empty_text_format']['empty_text'] = array(
     '#title' => t('Empty text'),

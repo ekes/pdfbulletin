@@ -355,22 +355,18 @@ function pdfbulletin_content_extra_fields() {
     'header' => array(
       'label' => t('Header'),
       'description' => t('To be displayed at the top of the bulletin'),
-      'weight' => 3,
     ),
     'footer' => array(
       'label' => t('Footer'),
       'description' => t('To be displayed at the bottom of the bulletin'),
-      'weight' => 4,
     ),
     'email' => array(
       'label' => t('Text for e-mail'),
       'description' => t('To be placed into the e-mail'),
-      'weight' => 5,
     ),
     'empty_text' => array(
       'label' => t('Empty text'),
       'description' => t('To be placed into the e-mail if the pdf bulletin has no entries'),
-      'weight' => 6,
     ),
   );
 
