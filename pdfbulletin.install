@@ -118,12 +118,19 @@ function pdfbulletin_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
-       'css_file' => array(
+      'css_file' => array(
         'type' => 'varchar',
         'length' => 255,
         'description' => 'The filename of the css for the pdf.',
         'not null' => TRUE,
         'default' => 'basic',
+      ),
+      'from_email' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'description' => 'Optional e-mail address as sender of bulletin.',
+        'not null' => TRUE,
+        'default' => '',
       ),
     ),
     'primary key' => array('nid'),
@@ -186,3 +193,13 @@ function pdfbulletin_update_6101() {
   return $ret;
 }
 
+/**
+ * Update 6102.
+ *
+ * Add sender e-mail column.
+ */
+function pdfbulletin_update_6102() {
+  $ret = array();
+  $ret[] = update_sql("ALTER TABLE {pdfbulletin_view} ADD from_email varchar(255) NOT NULL DEFAULT ''");
+  return $ret;
+}

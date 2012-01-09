@@ -408,7 +408,7 @@ function pdfbulletin_send_action($node, $settings) {
  *   pdfbulletin object with html and (pdf) file variables set.
  */
 function pdfbulletin_send_email($pdfbulletin, &$node) {
-  $sender = ''; // @todo sender
+  $sender = $pdfbulletin->from_email;
   $subject = check_plain($node->title);
   $body = theme('pdfbulletin_email_html', $pdfbulletin, $pdfbulletin->email_safe, $pdfbulletin->header_safe, $pdfbulletin->footer_safe);
   $plaintext = FALSE;

@@ -24,6 +24,14 @@ function pdfbulletin_edit_form(&$node, $form_state) {
     '#weight' => -5,
   );
 
+  $form['from_email'] = array(
+    '#type' => 'textfield',
+    '#title' => t('From e-mail address'),
+    '#required' => FALSE,
+    '#default_vaule' => check_plain($pdfbulletin->from_email),
+    '#weight' => -4,
+  );
+
   $form['group_settings'] = array(
     '#type' => 'fieldset',
     '#title' => t('Layout settings'),
