@@ -28,7 +28,7 @@ function pdfbulletin_edit_form(&$node, $form_state) {
     '#type' => 'textfield',
     '#title' => t('From e-mail address'),
     '#required' => FALSE,
-    '#default_vaule' => check_plain($pdfbulletin->from_email),
+    '#default_value' => check_plain($pdfbulletin->from_email),
     '#weight' => -4,
   );
 
