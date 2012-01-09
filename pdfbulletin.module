@@ -112,7 +112,7 @@ function pdfbulletin_view($node, $teaser = 0, $page = 0) {
   return $node;
 }
 
-/** 
+/**
  * Implementation of hook_insert().
  */
 function pdfbulletin_insert(&$node) {
@@ -140,6 +140,7 @@ function pdfbulletin_update(&$node) {
   $pdfbulletin->vid = $node->vid;
   $pdfbulletin->paper_size = $node->paper_size;
   $pdfbulletin->css_file = $node->css_file;
+  $pdfbulletin->from_email = $node->from_email;
 
   if ($node->revision) {
     drupal_write_record('pdfbulletin_view', $pdfbulletin);
